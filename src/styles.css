@@ -77,8 +77,11 @@ h1:focus { outline: none; }
 .recipe-card-muted .recipe-visual { background: #f3f0e8; }
 .recipe-visual span { font-size: 36px; line-height: 1; }
 .recipe-details { flex: 1; min-width: 0; }
-.recipe-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 7px; }
-.recipe-title-row h2 { margin: 2px 0 0; font-size: 17px; font-weight: 750; letter-spacing: -.025em; }
+.recipe-title-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 7px; }
+.recipe-title-row h2 { flex: 1 1 120px; margin: 2px 0 0; font-size: 17px; font-weight: 750; letter-spacing: -.025em; }
+.difficulty-badge { padding: 5px 7px; border-radius: 6px; white-space: nowrap; font-size: 10px; font-weight: 750; }
+.difficulty-badge.simple { background: #e8f2e9; color: #286b49; }
+.difficulty-badge.elaborate { background: #fff0d3; color: #8a5a13; }
 .recipe-details p { margin: 5px 0 0; color: #65766a; font-size: 13px; }
 .coming-soon { padding: 5px 7px; border-radius: 6px; background: #f0f1ed; color: #657568; white-space: nowrap; font-size: 10px; font-weight: 750; }
 .recipe-link { min-height: 48px; padding: 0; margin-top: 5px; display: inline-flex; align-items: center; gap: 6px; color: #286b49; font-size: 14px; font-weight: 750; }
@@ -186,8 +189,15 @@ h1:focus { outline: none; }
 .search-field:focus-within { border-color: #286b49; box-shadow: 0 0 0 2px #cde2cf; }
 .search-field input { flex: 1; min-width: 0; height: 50px; padding: 0; border: 0; outline: 0; background: transparent; color: #183027; font-size: 15px; }
 .search-field input::placeholder { color: #7c8b7f; }
+.search-field input::-webkit-search-cancel-button { display: none; }
 .search-field button { flex: 0 0 48px; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 10px; color: #286b49; }
 .search-field button:hover { background: #edf5ed; }
+.difficulty-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.difficulty-filters button { min-height: 40px; padding: 0 13px; border: 1px solid #dce5dc; border-radius: 999px; background: #fff; color: #526759; font-size: 13px; font-weight: 700; }
+.difficulty-filters button.selected { border-color: #286b49; background: #e8f2e9; color: #286b49; }
+.difficulty-filters button:focus-visible { outline: 3px solid #9ac9a4; outline-offset: 2px; }
+.recipe-count { margin: 0 0 12px; color: #65766a; font-size: 13px; }
+.safety-note { margin-top: 9px; }
 .empty-card { min-height: 155px; padding: 23px; border: 1px solid #dce5dc; border-radius: 16px; background: #fff; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; color: #286b49; }
 .empty-card strong { margin-top: 9px; color: #183027; font-size: 16px; }
 .empty-card p { margin: 6px 0 0; color: #5a705e; font-size: 14px; line-height: 1.45; }
@@ -225,6 +235,7 @@ h1:focus { outline: none; }
 .profile-secondary { margin-top: 28px; }
 .profile-achievements { margin-top: 28px; }
 .profile-achievements .achievement-card { margin-top: 0; }
+.profile-achievements .achievement-card + .achievement-card { margin-top: 10px; }
 .profile-achievements .empty-card { min-height: 80px; padding: 16px; }
 .profile-achievements .empty-card p { margin: 0; }
 

@@ -4,7 +4,7 @@ import {
   Clock3, CookingPot, Flame, Leaf, Lightbulb, LockKeyhole, Medal, Microwave,
   Pause, Search, Sparkles, Square, UserRound, Wind, X, Zap,
 } from 'lucide-react';
-import { ingredients, medals, steps } from './data.js';
+import { medals, recipeById, recipes } from './data.js';
 import {
   compatibleRecipes, formatDate, formatDuration, levelProgress, loadState,
   nextMedal, reducer, selectedEquipment, STORAGE_KEY,
@@ -106,7 +106,7 @@ const equipmentOptions = [
   { key: 'fryer', label: 'Air fryer', sub: 'Para receitas crocantes', Icon: Wind, color: 'mint' },
   { key: 'oven', label: 'Forno', sub: 'Para receitas assadas', Icon: Square, color: 'peach' },
   { key: 'microwave', label: 'Micro-ondas', sub: 'Para receitas rápidas', Icon: Microwave, color: 'mint' },
-  { key: 'electricPot', label: 'Panela elétrica', sub: 'Para preparos na panela elétrica', Icon: Zap, color: 'peach' },
+  { key: 'electricPot', label: 'Panela elétrica', sub: 'Arroz e multicooker, sem pressão', Icon: Zap, color: 'peach' },
   { key: 'none', label: 'Sem equipamento', sub: 'Receitas sem aquecimento', Icon: CircleSlash, color: 'cream' },
 ];
 
@@ -145,20 +145,27 @@ function EquipmentScreen({ state, dispatch, headingRef }) {
 
 function RecipeCard({ recipe, resumed, onClick }) {
   return (
-    <article className={`recipe-card ${!recipe.available ? 'recipe-card-muted' : ''}`}>
+    <article className="recipe-card" aria-label={recipe.name}>
       <div className="recipe-visual" aria-hidden="true"><span>{recipe.emoji}</span></div>
       <div className="recipe-details">
-        <div className="recipe-title-row"><h2>{recipe.name}</h2>{!recipe.available && <span className="coming-soon">Em breve</span>}</div>
+        <div className="recipe-title-row"><h2>{recipe.name}</h2><span className={`difficulty-badge ${recipe.difficulty}`}>{recipe.difficulty === 'simple' ? 'Simples' : 'Elaborada'}</span></div>
         <p>{recipe.meta}</p>
-        {recipe.available && <button type="button" className="recipe-link" onClick={onClick}>{resumed ? 'Retomar receita' : 'Ver ingredientes'} <ArrowRight size={18} aria-hidden="true" /></button>}
+        <button type="button" className="recipe-link" onClick={onClick}>{resumed ? 'Retomar receita' : 'Ver ingredientes'} <ArrowRight size={18} aria-hidden="true" /></button>
       </div>
     </article>
   );
 }
 
 function RecipesScreen({ state, dispatch, headingRef }) {
+  const [difficulty, setDifficulty] = useState('all');
   const selected = state.equipment.none ? 'Sem equipamento' : equipmentOptions.filter((item) => item.key !== 'none' && state.equipment[item.key]).map((item) => item.label).join(' + ');
-  const shown = compatibleRecipes(state.equipment, state.search);
+  const matched = compatibleRecipes(state.equipment, state.search);
+  const shown = difficulty === 'all' ? matched : matched.filter((recipe) => recipe.difficulty === difficulty);
+  const openRecipe = (recipe) => {
+    const replace = Boolean(state.prep && state.prep.recipeId !== recipe.id);
+    if (replace && !window.confirm(`Você tem ${recipeById(state.prep.recipeId)?.name ?? 'outra receita'} em andamento. Começar ${recipe.name} apaga as etapas desse preparo. Continuar?`)) return;
+    dispatch({ type: 'OPEN_RECIPE', recipeId: recipe.id, replace, now: Date.now() });
+  };
   return (
     <main className="page-content recipes-page">
       <LevelCard xp={state.xp} />
@@ -171,33 +178,40 @@ function RecipesScreen({ state, dispatch, headingRef }) {
           onChange={(event) => dispatch({ type: 'SET_SEARCH', value: event.target.value })} />
         {state.search && <button type="button" aria-label="Limpar busca" onClick={dispatchType(dispatch, 'SET_SEARCH', { value: '' })}><X size={19} aria-hidden="true" /></button>}
       </div>
+      <div className="difficulty-filters" role="group" aria-label="Dificuldade das receitas">
+        {[['all', 'Todas'], ['simple', 'Simples'], ['elaborate', 'Elaboradas']].map(([value, label]) =>
+          <button key={value} type="button" aria-pressed={difficulty === value} className={difficulty === value ? 'selected' : ''} onClick={() => setDifficulty(value)}>{label}</button>)}
+      </div>
+      <p className="recipe-count" role="status">{shown.length} {shown.length === 1 ? 'receita encontrada' : 'receitas encontradas'}</p>
       {shown.length ? (
         <div className="recipe-list grid gap-3">
-          {shown.map((recipe) => <RecipeCard key={recipe.name} recipe={recipe} resumed={Boolean(state.prep)}
-            onClick={() => dispatch({ type: 'OPEN_WRAP', now: Date.now() })} />)}
+          {shown.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} resumed={state.prep?.recipeId === recipe.id}
+            onClick={() => openRecipe(recipe)} />)}
         </div>
       ) : <div className="empty-card" role="status"><Search size={26} aria-hidden="true" /><strong>Nenhuma receita encontrada.</strong><p>Tente outro nome ou altere os equipamentos.</p></div>}
-      <p className="recipe-footnote"><Leaf size={17} aria-hidden="true" /> O wrap frio funciona com qualquer equipamento.</p>
+      <p className="recipe-footnote"><Leaf size={17} aria-hidden="true" /> Receitas sem aquecimento funcionam com qualquer seleção de equipamentos.</p>
     </main>
   );
 }
 
 function IngredientsScreen({ state, dispatch, headingRef }) {
+  const recipe = recipeById(state.prep.recipeId);
   const checkedCount = state.prep.checked.filter(Boolean).length;
   return (
     <main className="page-content prep-layout ingredients-page">
       <section className="prep-primary">
-        <ScreenIntro eyebrow="ANTES DE COMEÇAR" title="Separe tudo antes de começar" description="Wrap frio · 1 porção · Você também vai usar um prato e uma colher." headingRef={headingRef} />
-        <div className="section-heading"><h2>Ingredientes</h2><span>{checkedCount} de 4 separados</span></div>
+        <ScreenIntro eyebrow="ANTES DE COMEÇAR" title="Separe tudo antes de começar" description={`${recipe.name} · ${recipe.portions} ${recipe.portions === 1 ? 'porção' : 'porções'} · Use ${recipe.utensils}.`} headingRef={headingRef} />
+        <div className="section-heading"><h2>Ingredientes</h2><span>{checkedCount} de {recipe.ingredients.length} separados</span></div>
         <div className="ingredient-list grid gap-2">
-          {ingredients.map((ingredient, index) => <label className={`ingredient-item ${state.prep.checked[index] ? 'checked' : ''}`} key={ingredient}>
+          {recipe.ingredients.map((ingredient, index) => <label className={`ingredient-item ${state.prep.checked[index] ? 'checked' : ''}`} key={`${recipe.id}-${index}`}>
             <input type="checkbox" checked={state.prep.checked[index]} onChange={() => dispatch({ type: 'TOGGLE_INGREDIENT', index })} /><span>{ingredient}</span>
           </label>)}
         </div>
       </section>
       <section className="prep-secondary">
         <div className="note-card"><Lightbulb size={19} aria-hidden="true" /><p>Deixe os ingredientes ao alcance antes de iniciar. Separá-los não concede XP.</p></div>
-        <ActionBar><PrimaryButton disabled={checkedCount !== ingredients.length} onClick={dispatchType(dispatch, 'START_RECIPE')}>Começar receita</PrimaryButton><p className="action-hint">Marque os 4 ingredientes para continuar.</p></ActionBar>
+        {recipe.safety && <div className="note-card safety-note"><Lightbulb size={19} aria-hidden="true" /><p>{recipe.safety}</p></div>}
+        <ActionBar><PrimaryButton disabled={checkedCount !== recipe.ingredients.length} onClick={dispatchType(dispatch, 'START_RECIPE')}>Começar receita</PrimaryButton><p className="action-hint">Marque os {recipe.ingredients.length} ingredientes para continuar.</p></ActionBar>
       </section>
     </main>
   );
@@ -205,15 +219,17 @@ function IngredientsScreen({ state, dispatch, headingRef }) {
 
 function StepScreen({ state, dispatch, headingRef, onValidate, onFinish }) {
   const { prep } = state;
-  const step = steps[prep.stepIndex];
+  const recipe = recipeById(prep.recipeId);
+  const stepCount = recipe.steps.length;
+  const step = recipe.steps[prep.stepIndex];
   const validated = prep.validated[prep.stepIndex];
   const validatedCount = prep.validated.filter(Boolean).length;
   return (
     <main className="page-content step-page prep-layout">
       <section className="prep-primary">
-        <div className="step-progress" aria-label={`${validatedCount} de 4 etapas validadas`}>
-          <div className="step-progress-top"><span>Etapa {prep.stepIndex + 1} de 4</span><strong>{Math.round((validatedCount / 4) * 100)}%</strong></div>
-          <div className="progress-track" role="progressbar" aria-valuenow={validatedCount} aria-valuemin={0} aria-valuemax={4} aria-label="Etapas validadas"><div style={{ width: `${(validatedCount / 4) * 100}%` }} /></div>
+        <div className="step-progress" aria-label={`${validatedCount} de ${stepCount} etapas validadas`}>
+          <div className="step-progress-top"><span>Etapa {prep.stepIndex + 1} de {stepCount}</span><strong>{Math.round((validatedCount / stepCount) * 100)}%</strong></div>
+          <div className="progress-track" role="progressbar" aria-valuenow={validatedCount} aria-valuemin={0} aria-valuemax={stepCount} aria-label="Etapas validadas"><div style={{ width: `${(validatedCount / stepCount) * 100}%` }} /></div>
         </div>
         <ScreenIntro eyebrow="HORA DE PREPARAR" title={step.instruction} description="Faça esta parte no seu ritmo. Depois, confirme o resultado." headingRef={headingRef} />
       </section>
@@ -222,7 +238,7 @@ function StepScreen({ state, dispatch, headingRef, onValidate, onFinish }) {
         {prep.hintOpen && !validated && <div className="tip-card" role="status" aria-live="polite"><Lightbulb size={21} aria-hidden="true" /><div><strong>Vamos ajustar juntos</strong><p>{step.tip}</p><p className="tip-cost">{prep.pendingTipDeduction > 0 ? 'A primeira Dica custa 1 XP, que será descontado no próximo ganho. ' : 'A primeira Dica descontou 1 XP. '}As etapas restantes valem 4 XP cada.</p></div></div>}
         {validated && <div className="success-card" role="status" aria-live="polite"><CircleCheck size={23} aria-hidden="true" /><div><strong>Etapa validada! +{prep.stepXp[prep.stepIndex]} XP</strong><p>Boa! Você já pode seguir para a próxima parte.</p></div></div>}
         <ActionBar>
-          {validated ? <PrimaryButton nextAction onClick={prep.stepIndex === 3 ? onFinish : dispatchType(dispatch, 'NEXT_STEP')}>{prep.stepIndex === 3 ? 'Concluir receita' : 'Próxima etapa'}</PrimaryButton>
+          {validated ? <PrimaryButton nextAction onClick={prep.stepIndex === stepCount - 1 ? onFinish : dispatchType(dispatch, 'NEXT_STEP')}>{prep.stepIndex === stepCount - 1 ? 'Concluir receita' : 'Próxima etapa'}</PrimaryButton>
             : prep.hintOpen ? <><PrimaryButton onClick={onValidate}>Deu certo agora</PrimaryButton><button className="secondary-action" type="button" onClick={dispatchType(dispatch, 'CLOSE_ADJUSTMENT')}>Continuar nesta etapa</button></>
               : <><PrimaryButton onClick={onValidate}>Deu certo</PrimaryButton><button className="secondary-action" type="button" onClick={dispatchType(dispatch, 'REQUEST_ADJUSTMENT')}>Dica</button></>}
         </ActionBar>
@@ -248,13 +264,15 @@ function MedalList({ completed }) {
 
 function CompletionScreen({ state, dispatch, headingRef }) {
   const summary = state.latestCompletion;
+  const recipe = recipeById(summary?.recipeId) ?? recipeById('wrap');
+  const earnedCount = state.achievements[recipe.id] ?? 0;
   return <main className="page-content completion-page completion-layout">
     <section className="summary-primary">
-      <div className="completion-hero" aria-hidden="true"><span>🌯</span><Sparkles size={23} /></div>
-      <ScreenIntro eyebrow="MISSÃO CUMPRIDA" title="Wrap frio pronto!" description={`Você ganhou ${summary?.stepTotal ?? 20} XP pelas etapas e 100 XP pela receita.`} headingRef={headingRef} />
+      <div className="completion-hero" aria-hidden="true"><span>{recipe.emoji}</span><Sparkles size={23} /></div>
+      <ScreenIntro eyebrow="MISSÃO CUMPRIDA" title={`${recipe.name} pronto!`} description={`Você ganhou ${summary?.stepTotal ?? recipe.steps.length * 5} XP pelas etapas e 100 XP pela receita.`} headingRef={headingRef} />
       <div className="total-card"><div><span>Total deste preparo</span><strong>+{summary?.xpEarned ?? 120} XP</strong></div><p>Saldo acumulado: <strong>{state.xp} XP</strong></p></div>
       {summary?.tipDeduction > 0 && <p className="deduction-note">A Dica descontou {summary.tipDeduction} XP neste preparo.</p>}
-      <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Conquista recebida: Wrap frio preparado</strong><p>Recebida {state.achievements.wrap} {state.achievements.wrap === 1 ? 'vez' : 'vezes'}.</p></div></div>
+      <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Conquista recebida: {recipe.name} preparado</strong><p>Recebida {earnedCount} {earnedCount === 1 ? 'vez' : 'vezes'}.</p></div></div>
     </section>
     <section className="summary-secondary">
       <div className="medal-section"><div className="section-heading"><h2>Suas medalhas</h2><span>{state.completed} preparos</span></div><p className="completed-count">Receitas concluídas: <strong>{state.completed}</strong></p>
@@ -276,13 +294,13 @@ function RecordsScreen({ state, dispatch, headingRef }) {
     <div className="records-total"><Sparkles size={20} aria-hidden="true" /><span>XP total acumulado</span><strong>{state.xp} XP</strong></div>
     {state.records.length ? <>
       <div className="record-cards">{state.records.map((record) => <article className="record-card" key={record.id}>
-        <div className="record-card-title"><span aria-hidden="true">🌯</span><strong>{record.recipe}</strong><b>+{record.xpEarned} XP</b></div>
+        <div className="record-card-title"><span aria-hidden="true">{recipeById(record.recipeId)?.emoji ?? '🌯'}</span><strong>{record.recipe}</strong><b>+{record.xpEarned} XP</b></div>
         <p>{recordDate(record)}</p><p>{record.durationMs === null ? 'Duração não registrada' : `Duração: ${formatDuration(record.durationMs)}`}</p><p>XP ganho: {record.xpEarned} XP</p>
       </article>)}</div>
       <table className="records-table"><caption>Preparos concluídos, do mais recente ao mais antigo</caption><thead><tr><th scope="col">Receita</th><th scope="col">Concluído em</th><th scope="col">Duração</th><th scope="col">XP ganho</th></tr></thead>
         <tbody>{state.records.map((record) => <tr key={record.id}><th scope="row">{record.recipe}</th><td>{recordDate(record)}</td><td>{formatDuration(record.durationMs)}</td><td>{record.xpEarned} XP</td></tr>)}</tbody>
       </table>
-    </> : <div className="empty-card record-empty"><BookOpen size={26} aria-hidden="true" /><strong>Nenhum preparo concluído ainda.</strong><p>Prepare o Wrap frio para criar seu primeiro registro.</p>
+    </> : <div className="empty-card record-empty"><BookOpen size={26} aria-hidden="true" /><strong>Nenhum preparo concluído ainda.</strong><p>Escolha uma receita para criar seu primeiro registro.</p>
       <button type="button" className="secondary-action" onClick={dispatchType(dispatch, 'NAVIGATE', { tab: 'recipes' })}>Explorar receitas</button></div>}
   </main>;
 }
@@ -291,6 +309,7 @@ function ProfileScreen({ state, dispatch, headingRef }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(state.profileName);
   const [error, setError] = useState('');
+  const earnedRecipes = recipes.filter((recipe) => (state.achievements[recipe.id] ?? 0) > 0);
   const saveName = () => {
     const name = draft.trim();
     if (!name) { setError('Digite um nome para continuar.'); return; }
@@ -314,7 +333,7 @@ function ProfileScreen({ state, dispatch, headingRef }) {
       <section className="profile-secondary">
         <div className="section-heading"><h2>Medalhas</h2></div><MedalList completed={state.completed} />
         <div className="profile-achievements"><div className="section-heading"><h2>Conquistas</h2></div>
-          {state.achievements.wrap > 0 ? <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Wrap frio preparado</strong><p>Recebida {state.achievements.wrap} {state.achievements.wrap === 1 ? 'vez' : 'vezes'}</p></div></div>
+          {earnedRecipes.length ? earnedRecipes.map((recipe) => <div className="achievement-card" key={recipe.id}><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>{recipe.name} preparado</strong><p>Recebida {state.achievements[recipe.id]} {state.achievements[recipe.id] === 1 ? 'vez' : 'vezes'}</p></div></div>)
             : <div className="empty-card"><p>Você ainda não recebeu conquistas.</p></div>}
         </div>
       </section>
@@ -356,8 +375,8 @@ function AnimationLayer({ phase, onAdvance }) {
   const isMedal = phase.kind === 'medal';
   const content = {
     step: { title: 'Etapa validada!', detail: `+${phase.points} XP`, icon: <CircleCheck size={48} aria-hidden="true" /> },
-    completion: { title: 'Wrap frio pronto!', detail: '+100 XP pela receita', icon: <span className="animation-wrap" aria-hidden="true">🌯</span> },
-    achievement: { title: 'Conquista recebida', detail: 'Wrap frio preparado', icon: <CircleCheck size={48} aria-hidden="true" /> },
+    completion: { title: `${phase.recipeName} pronto!`, detail: '+100 XP pela receita', icon: <span className="animation-wrap" aria-hidden="true">{phase.recipeEmoji}</span> },
+    achievement: { title: 'Conquista recebida', detail: `${phase.recipeName} preparado`, icon: <CircleCheck size={48} aria-hidden="true" /> },
     medal: { title: `Nova medalha: ${phase.medalName}!`, detail: `${phase.medalThreshold} receitas concluídas`, icon: <Medal size={96} aria-hidden="true" /> },
   }[phase.kind];
   return <div className="animation-layer" onClick={onAdvance}>
@@ -410,7 +429,10 @@ export default function App() {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* The UI still works for this session. */ }
     dispatch(action);
     if (reducedMotion) dispatch({ type: 'ANIMATIONS_DONE' });
-    else setAnimation({ kind: 'completion', medalName: next.latestCompletion.newMedal, medalThreshold: next.latestCompletion.medalThreshold });
+    else {
+      const recipe = recipeById(next.latestCompletion.recipeId);
+      setAnimation({ kind: 'completion', recipeName: recipe.name, recipeEmoji: recipe.emoji, medalName: next.latestCompletion.newMedal, medalThreshold: next.latestCompletion.medalThreshold });
+    }
   };
 
   return <div className={`app-shell ${showTabs ? 'has-tabs' : 'is-preparing'}`}>

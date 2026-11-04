@@ -9,6 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     css: true,
+    testTimeout: 15000,
     include: ['src/**/*.test.{js,jsx}'],
   },
 });

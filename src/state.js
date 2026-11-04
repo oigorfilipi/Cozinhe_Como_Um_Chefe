@@ -1,4 +1,4 @@
-import { ingredients, medals, recipes, steps } from './data.js';
+import { medals, recipeById, recipes } from './data.js';
 
 // Keep the V1 key so existing browser data can be migrated in place.
 export const STORAGE_KEY = 'cozinha-xp-prototipo-v1';
@@ -6,7 +6,7 @@ const equipmentKeys = ['stove', 'fryer', 'oven', 'microwave', 'electricPot'];
 
 export function initialState() {
   return {
-    version: 2,
+    version: 3,
     screen: 'equipment',
     equipment: { stove: false, fryer: false, oven: false, microwave: false, electricPot: false, none: false },
     prep: null,
@@ -59,20 +59,22 @@ export function nextMedal(completed) {
 }
 
 export function compatibleRecipes(equipment, search = '') {
-  const query = search.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR');
+  const query = normalize(search.trim());
   return recipes.filter((recipe) =>
     (!recipe.equipment || equipment[recipe.equipment]) &&
-    recipe.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').includes(query),
+    (normalize(recipe.name).includes(query) || recipe.ingredients.some((item) => normalize(item).includes(query))),
   );
 }
 
-function newPrep(xp, now) {
+function newPrep(recipe, xp, now) {
   return {
+    recipeId: recipe.id,
     stage: 'ingredients',
-    checked: ingredients.map(() => false),
+    checked: recipe.ingredients.map(() => false),
     stepIndex: 0,
-    validated: steps.map(() => false),
-    stepXp: steps.map(() => 0),
+    validated: recipe.steps.map(() => false),
+    stepXp: recipe.steps.map(() => 0),
     hintOpen: false,
     tipUsed: false,
     tipDeduction: 0,
@@ -84,12 +86,14 @@ function newPrep(xp, now) {
 
 function normalizePrep(prep, xp, now) {
   if (!prep || !['ingredients', 'step'].includes(prep.stage)) return null;
-  const validated = steps.map((_, index) => Boolean(prep.validated?.[index]));
-  const stepXp = steps.map((_, index) => validated[index] ? (prep.stepXp?.[index] ?? 5) : 0);
+  const recipe = recipeById(prep.recipeId) ?? recipeById('wrap');
+  const validated = recipe.steps.map((_, index) => Boolean(prep.validated?.[index]));
+  const stepXp = recipe.steps.map((_, index) => validated[index] ? (prep.stepXp?.[index] ?? 5) : 0);
   return {
+    recipeId: recipe.id,
     stage: prep.stage,
-    checked: ingredients.map((_, index) => Boolean(prep.checked?.[index])),
-    stepIndex: Math.max(0, Math.min(steps.length - 1, Number.isInteger(prep.stepIndex) ? prep.stepIndex : 0)),
+    checked: recipe.ingredients.map((_, index) => Boolean(prep.checked?.[index])),
+    stepIndex: Math.max(0, Math.min(recipe.steps.length - 1, Number.isInteger(prep.stepIndex) ? prep.stepIndex : 0)),
     validated,
     stepXp,
     hintOpen: Boolean(prep.hintOpen),
@@ -105,7 +109,7 @@ function normalizePrep(prep, xp, now) {
 }
 
 export function migrateState(saved, now = Date.now()) {
-  if (![1, 2].includes(saved?.version) || !saved.equipment || !Number.isInteger(saved.xp) || !Number.isInteger(saved.completed)) return initialState();
+  if (![1, 2, 3].includes(saved?.version) || !saved.equipment || !Number.isInteger(saved.xp) || !Number.isInteger(saved.completed)) return initialState();
   const base = initialState();
   const equipment = Object.fromEntries(Object.keys(base.equipment).map((key) => [key, Boolean(saved.equipment[key])]));
   const completed = Math.max(0, saved.completed);
@@ -131,11 +135,13 @@ export function migrateState(saved, now = Date.now()) {
     pauseOpen: ['ingredients', 'step'].includes(screen) && Boolean(saved.pauseOpen),
     xp: Math.max(0, saved.xp),
     completed,
-    achievements: { wrap: Math.max(0, saved.achievements?.wrap ?? completed) },
+    achievements: saved.version === 3 && saved.achievements && typeof saved.achievements === 'object'
+      ? { ...saved.achievements, wrap: Math.max(0, saved.achievements.wrap ?? 0) }
+      : { wrap: Math.max(0, saved.achievements?.wrap ?? completed) },
     latestCompletion: saved.latestCompletion ?? null,
     records: saved.version === 1 ? legacyRecords : (Array.isArray(saved.records) ? saved.records : legacyRecords),
-    profileName: saved.version === 2 && typeof saved.profileName === 'string' && saved.profileName.trim() ? saved.profileName : base.profileName,
-    search: saved.version === 2 && typeof saved.search === 'string' ? saved.search : '',
+    profileName: saved.version >= 2 && typeof saved.profileName === 'string' && saved.profileName.trim() ? saved.profileName : base.profileName,
+    search: saved.version >= 2 && typeof saved.search === 'string' ? saved.search : '',
   };
 }
 
@@ -188,14 +194,19 @@ export function reducer(state, action) {
       return { ...state, screen: 'recipes', pauseOpen: false };
     case 'CHANGE_EQUIPMENT':
       return state.screen === 'recipes' ? { ...state, screen: 'equipment', search: '' } : state;
-    case 'OPEN_WRAP': {
+    case 'OPEN_WRAP':
+    case 'OPEN_RECIPE': {
       if (state.screen !== 'recipes') return state;
-      const prep = state.prep ?? newPrep(state.xp, action.now ?? Date.now());
+      const recipe = recipeById(action.type === 'OPEN_WRAP' ? 'wrap' : action.recipeId);
+      if (!recipe || !compatibleRecipes(state.equipment).some((item) => item.id === recipe.id)) return state;
+      if (state.prep && state.prep.recipeId !== recipe.id && !action.replace) return state;
+      const prep = state.prep?.recipeId === recipe.id ? state.prep : newPrep(recipe, state.xp, action.now ?? Date.now());
       return { ...state, prep, screen: prep.stage, latestCompletion: null };
     }
     case 'TOGGLE_INGREDIENT': {
       if (state.screen !== 'ingredients' || !state.prep || state.pauseOpen) return state;
-      if (!Number.isInteger(action.index) || action.index < 0 || action.index >= ingredients.length) return state;
+      const recipe = recipeById(state.prep.recipeId);
+      if (!recipe || !Number.isInteger(action.index) || action.index < 0 || action.index >= recipe.ingredients.length) return state;
       const checked = [...state.prep.checked];
       checked[action.index] = !checked[action.index];
       return { ...state, prep: { ...state.prep, checked } };
@@ -230,8 +241,10 @@ export function reducer(state, action) {
       return { ...state, prep: { ...state.prep, hintOpen: false } };
     case 'VALIDATE_STEP': {
       if (state.screen !== 'step' || state.pauseOpen || !state.prep) return state;
+      const recipe = recipeById(state.prep.recipeId);
+      if (!recipe) return state;
       const index = state.prep.stepIndex;
-      if (state.prep.validated[index]) return state;
+      if (index >= recipe.steps.length || state.prep.validated[index]) return state;
       const points = state.prep.tipUsed ? 4 : 5;
       const validated = [...state.prep.validated];
       const stepXp = [...state.prep.stepXp];
@@ -245,10 +258,11 @@ export function reducer(state, action) {
       };
     }
     case 'NEXT_STEP':
-      if (state.screen !== 'step' || state.pauseOpen || !state.prep || !state.prep.validated[state.prep.stepIndex] || state.prep.stepIndex >= steps.length - 1) return state;
+      if (state.screen !== 'step' || state.pauseOpen || !state.prep || !state.prep.validated[state.prep.stepIndex] || state.prep.stepIndex >= (recipeById(state.prep.recipeId)?.steps.length ?? 0) - 1) return state;
       return { ...state, prep: { ...state.prep, stepIndex: state.prep.stepIndex + 1, hintOpen: false } };
     case 'FINISH_RECIPE': {
-      if (state.screen !== 'step' || state.pauseOpen || !state.prep || state.prep.stepIndex !== steps.length - 1 || !state.prep.validated.every(Boolean)) return state;
+      const recipe = recipeById(state.prep?.recipeId);
+      if (state.screen !== 'step' || state.pauseOpen || !state.prep || !recipe || state.prep.stepIndex !== recipe.steps.length - 1 || !state.prep.validated.every(Boolean)) return state;
       const completed = state.completed + 1;
       const newMedal = medals.find((medal) => medal.threshold === completed) ?? null;
       const xp = state.xp + 100;
@@ -256,8 +270,9 @@ export function reducer(state, action) {
       const stepTotal = state.prep.stepXp.reduce((sum, value) => sum + value, 0);
       const xpEarned = xp - state.prep.xpAtOpen;
       const record = {
-        id: `wrap-${endedAt}-${completed}`,
-        recipe: 'Wrap frio',
+        id: `${recipe.id}-${endedAt}-${completed}`,
+        recipeId: recipe.id,
+        recipe: recipe.name,
         completedAt: endedAt,
         durationMs: Math.max(0, endedAt - state.prep.enteredAt),
         xpEarned,
@@ -270,9 +285,9 @@ export function reducer(state, action) {
         prep: null,
         xp,
         completed,
-        achievements: { ...state.achievements, wrap: state.achievements.wrap + 1 },
+        achievements: { ...state.achievements, [recipe.id]: (state.achievements[recipe.id] ?? 0) + 1 },
         records: [record, ...state.records],
-        latestCompletion: { newMedal: newMedal?.name ?? null, medalThreshold: newMedal?.threshold ?? null, stepTotal, tipDeduction: state.prep.tipDeduction, xpEarned },
+        latestCompletion: { recipeId: recipe.id, newMedal: newMedal?.name ?? null, medalThreshold: newMedal?.threshold ?? null, stepTotal, tipDeduction: state.prep.tipDeduction, xpEarned },
       };
     }
     case 'ANIMATIONS_DONE':

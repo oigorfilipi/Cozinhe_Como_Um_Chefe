@@ -12,15 +12,15 @@ Este é um protótipo acadêmico da VT de Gamificação Aplicada. Foi feito em R
 
 **[Abrir o protótipo no PC ou celular](https://oigorfilipi.github.io/Cozinhe_Como_Um_Chefe/)**. O endereço do repositório mostra os arquivos; este link abre o aplicativo para o professor navegar.
 
-**Percurso completo disponível:** Wrap frio, com quatro ingredientes e quatro etapas. As outras cinco receitas aparecem como **Em breve** para mostrar o filtro por equipamentos e a busca; elas ainda não podem ser preparadas no app.
+O catálogo tem **62 receitas jogáveis**: 10 para cada um dos cinco aparelhos e 12 sem aquecimento. Em cada aparelho há cinco receitas simples e cinco elaboradas; no grupo sem equipamento, seis de cada tipo. O wrap original continua disponível.
 
 ## Como funciona
 
 1. Escolha Fogão, Air fryer, Forno, Micro-ondas, Panela elétrica ou Sem equipamento.
-2. Procure uma receita, abra o wrap e marque os quatro ingredientes.
+2. Busque pelo nome ou ingrediente, filtre por dificuldade, abra uma receita e marque seus ingredientes.
 3. Faça a etapa na cozinha e toque em **Deu certo** depois de conferir o resultado.
 4. Se precisar, toque em **Dica**. Ela orienta sem avançar a etapa.
-5. Após as quatro validações, conclua a receita e veja o preparo em **Registros**.
+5. Após validar todas as etapas, conclua a receita e veja o preparo em **Registros**.
 
 | Regra | Resultado |
 | --- | --- |
@@ -49,18 +49,22 @@ pnpm test
 pnpm build
 ```
 
-Há 20 testes automatizados. Eles cobrem XP, Dica com saldo zero, níveis, busca, retomada, Registros, medalha e animações. O PDF da VT registra os percursos de conclusão e exceção com resultados esperados e observados.
+Há 24 testes automatizados. Eles cobrem XP, Dica com saldo zero, níveis, catálogo por equipamento, receitas com quantidades diferentes de etapas, busca, retomada, Registros, medalha e animações. O PDF da VT registra os percursos de conclusão e exceção com resultados esperados e observados.
 
 ## Demonstração da medalha
 
-Na tela inicial, toque em **Iniciar demonstração com 9 preparos**. Esses nove registros são **simulados**, sem datas inventadas. Ao concluir mais um wrap, o app mostra a medalha Iniciante do décimo preparo. Para testar a Dica com saldo zero, use uma janela privada nova ou limpe os dados locais antes de iniciar.
+Na tela inicial, toque em **Iniciar demonstração com 9 preparos**. Esses nove registros são **simulados**, sem datas inventadas. Ao concluir qualquer receita, o app mostra a medalha Iniciante do décimo preparo. Para testar a Dica com saldo zero, use uma janela privada nova ou limpe os dados locais antes de iniciar.
 
 ## Limites e privacidade
 
 - O app guarda progresso apenas no `localStorage` do navegador. Não há conta, banco de dados nem sincronização entre dispositivos.
-- O tempo do Registro vai da entrada no wrap até **Concluir receita**, incluindo checklist, pausa e tempo com a página fechada.
+- O tempo do Registro vai da entrada na receita até **Concluir receita**, incluindo checklist, pausa e tempo com a página fechada.
 - Confirmar uma etapa não comprova que a pessoa cozinhou. O protótipo não registra todas as tentativas abandonadas; a avaliação de impacto descrita no PDF é um **plano futuro**, com meta hipotética de 50% para 70% em quatro semanas.
-- A V2 não tem recursos sociais. O tom de apoio e a possibilidade de cozinhar acompanhado são o vínculo atual com pertencimento.
+- O app não tem recursos sociais. O tom de apoio e a possibilidade de cozinhar acompanhado são o vínculo atual com pertencimento.
+
+## Segurança ao cozinhar
+
+Os tempos são aproximados e variam conforme o aparelho. Use recipientes indicados para micro-ondas, respeite o manual da panela elétrica e confirme o centro de carnes com termômetro culinário. As etapas com frango pedem **74 °C**; peixe pede **63 °C** ou carne opaca que se separa com garfo. Higienize as mãos e utensílios após contato com alimentos crus. Essas orientações seguem a [tabela de temperaturas do FoodSafety.gov](https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures), as [quatro etapas de segurança alimentar](https://www.foodsafety.gov/keep-food-safe/4-steps-to-food-safety) e a [cartilha de boas práticas da Anvisa](https://www.gov.br/anvisa/pt-br/arquivos-noticias-anvisa/812json-file-1/%40%40download/file).
 
 ## Materiais da VT
 
