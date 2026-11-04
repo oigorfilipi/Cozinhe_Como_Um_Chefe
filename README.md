@@ -80,7 +80,7 @@ Os tempos são aproximados e variam conforme o aparelho. Use recipientes indicad
 
 ## Materiais da VT
 
-Os arquivos abaixo documentam a versão acadêmica anterior (V3). A V4 acrescenta receitas pessoais, favoritos e personalização, descritos neste README e disponíveis no site.
+Os arquivos abaixo documentam a V4 e reúnem diagnóstico, regras, fluxo, cenários verificados, referências e roteiro de apresentação exigidos na VT.
 
 - [Apresentação principal em PDF](output/pdf/Cozinhe_como_um_Chefe_Projeto.pdf)
 - [Memorial técnico em DOCX](output/docx/Memorial_Tecnico_Cozinhe_como_um_Chefe.docx)
