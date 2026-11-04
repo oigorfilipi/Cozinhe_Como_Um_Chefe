@@ -1,0 +1,435 @@
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
+import {
+  ArrowLeft, ArrowRight, BookOpen, Check, ChefHat, CircleCheck, CircleSlash,
+  Clock3, CookingPot, Flame, Leaf, Lightbulb, LockKeyhole, Medal, Microwave,
+  Pause, Search, Sparkles, Square, UserRound, Wind, X, Zap,
+} from 'lucide-react';
+import { ingredients, medals, steps } from './data.js';
+import {
+  compatibleRecipes, formatDate, formatDuration, levelProgress, loadState,
+  nextMedal, reducer, selectedEquipment, STORAGE_KEY,
+} from './state.js';
+
+const dispatchType = (dispatch, type, extra = {}) => () => dispatch({ type, ...extra });
+
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false);
+  useEffect(() => {
+    const query = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (!query) return undefined;
+    const update = () => setReduced(query.matches);
+    query.addEventListener?.('change', update);
+    return () => query.removeEventListener?.('change', update);
+  }, []);
+  return reduced;
+}
+
+function ActionBar({ children }) {
+  return <div className="action-bar"><div className="action-bar-inner">{children}</div></div>;
+}
+
+function PrimaryButton({ children, onClick, disabled = false, icon = true, nextAction = false }) {
+  return (
+    <button className="primary-action" type="button" onClick={onClick} disabled={disabled} data-next-action={nextAction || undefined}>
+      <span>{children}</span>{icon && <ArrowRight aria-hidden="true" size={20} strokeWidth={2.4} />}
+    </button>
+  );
+}
+
+function Header({ xp, canPause, onPause }) {
+  return (
+    <header className="app-header">
+      <div className="header-inner flex items-center justify-between gap-2.5">
+        <div className="brand flex items-center gap-2" aria-label="Cozinhe como um Chefe">
+          <img className="brand-mark" src={`${import.meta.env.BASE_URL}logo.svg`} alt="" aria-hidden="true" />
+          <span className="brand-name">Cozinhe <strong>como um Chefe</strong></span>
+        </div>
+        <div className="header-actions flex items-center gap-2">
+          {canPause && <button className="pause-button" type="button" onClick={onPause}><Pause size={16} fill="currentColor" aria-hidden="true" /> Pausar</button>}
+          <div className="xp-pill" aria-label={`Saldo de XP: ${xp}`}><Sparkles size={16} aria-hidden="true" /> <strong>{xp}</strong> XP</div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MainNav({ screen, dispatch }) {
+  const active = ['equipment', 'recipes'].includes(screen) ? 'recipes' : screen;
+  const tabs = [
+    { key: 'recipes', label: 'Receitas', Icon: BookOpen },
+    { key: 'records', label: 'Registros', Icon: Clock3 },
+    { key: 'profile', label: 'Perfil', Icon: UserRound },
+  ];
+  return (
+    <nav className="main-nav" aria-label="Navegação principal">
+      {tabs.map(({ key, label, Icon }) => (
+        <button
+          key={key}
+          type="button"
+          className={`nav-tab ${active === key ? 'active' : ''}`}
+          aria-current={active === key ? 'page' : undefined}
+          onClick={dispatchType(dispatch, 'NAVIGATE', { tab: key })}
+        >
+          <Icon size={20} strokeWidth={2} aria-hidden="true" /><span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function ScreenIntro({ eyebrow, title, description, headingRef, after }) {
+  return (
+    <div className="screen-intro">
+      {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+      <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
+      {description && <p className="intro-copy">{description}</p>}
+      {after}
+    </div>
+  );
+}
+
+function LevelCard({ xp }) {
+  const { level, current, required } = levelProgress(xp);
+  return (
+    <section className="level-card" aria-label="Progresso de nível">
+      <div className="level-card-top"><strong>Nível {level}</strong><span>XP total: {xp}</span></div>
+      <div className="progress-track" role="progressbar" aria-label="Progresso para o próximo nível" aria-valuenow={current} aria-valuemin={0} aria-valuemax={required}>
+        <div style={{ width: `${(current / required) * 100}%` }} />
+      </div>
+      <p>{current} de {required} XP para o próximo nível</p>
+    </section>
+  );
+}
+
+const equipmentOptions = [
+  { key: 'stove', label: 'Fogão', sub: 'Para receitas na panela', Icon: Flame, color: 'peach' },
+  { key: 'fryer', label: 'Air fryer', sub: 'Para receitas crocantes', Icon: Wind, color: 'mint' },
+  { key: 'oven', label: 'Forno', sub: 'Para receitas assadas', Icon: Square, color: 'peach' },
+  { key: 'microwave', label: 'Micro-ondas', sub: 'Para receitas rápidas', Icon: Microwave, color: 'mint' },
+  { key: 'electricPot', label: 'Panela elétrica', sub: 'Para preparos na panela elétrica', Icon: Zap, color: 'peach' },
+  { key: 'none', label: 'Sem equipamento', sub: 'Receitas sem aquecimento', Icon: CircleSlash, color: 'cream' },
+];
+
+function EquipmentScreen({ state, dispatch, headingRef }) {
+  return (
+    <>
+      <main className="page-content equipment-page">
+        <LevelCard xp={state.xp} />
+        <ScreenIntro eyebrow="SUA COZINHA, SUAS MISSÕES" title="O que você tem para cozinhar?" description="Escolha uma opção ou combine equipamentos." headingRef={headingRef} />
+        <div className="equipment-list grid gap-2.5" role="group" aria-label="Equipamentos disponíveis">
+          {equipmentOptions.map(({ key, label, sub, Icon, color }) => (
+            <button key={key} type="button" className={`equipment-option ${state.equipment[key] ? 'is-selected' : ''}`}
+              aria-label={label} aria-pressed={state.equipment[key]} onClick={dispatchType(dispatch, 'TOGGLE_EQUIPMENT', { key })}>
+              <span className={`equipment-icon ${color}`}><Icon size={25} strokeWidth={1.9} aria-hidden="true" /></span>
+              <span className="equipment-labels"><strong>{label}</strong><small>{sub}</small></span>
+              <span className="option-check" aria-hidden="true">{state.equipment[key] && <Check size={16} strokeWidth={3} />}</span>
+            </button>
+          ))}
+        </div>
+        {state.completed === 0 && state.xp === 0 && !state.prep && (
+          <div className="demo-card">
+            <div className="demo-icon"><Medal size={20} aria-hidden="true" /></div>
+            <div><strong>Quer ver uma medalha?</strong><p>Comece com 9 preparos concluídos. O próximo wrap libera a medalha Iniciante.</p>
+              <button type="button" onClick={dispatchType(dispatch, 'SEED_DEMO')}>Iniciar demonstração com 9 preparos <ArrowRight size={16} aria-hidden="true" /></button>
+            </div>
+          </div>
+        )}
+        {state.completed === 9 && state.achievements.wrap === 9 && (
+          <p className="demo-active" role="status"><CircleCheck size={17} aria-hidden="true" /> Demonstração pronta: 9 receitas concluídas.</p>
+        )}
+      </main>
+      <ActionBar><PrimaryButton disabled={!selectedEquipment(state.equipment)} onClick={dispatchType(dispatch, 'VIEW_RECIPES')}>Ver receitas</PrimaryButton></ActionBar>
+    </>
+  );
+}
+
+function RecipeCard({ recipe, resumed, onClick }) {
+  return (
+    <article className={`recipe-card ${!recipe.available ? 'recipe-card-muted' : ''}`}>
+      <div className="recipe-visual" aria-hidden="true"><span>{recipe.emoji}</span></div>
+      <div className="recipe-details">
+        <div className="recipe-title-row"><h2>{recipe.name}</h2>{!recipe.available && <span className="coming-soon">Em breve</span>}</div>
+        <p>{recipe.meta}</p>
+        {recipe.available && <button type="button" className="recipe-link" onClick={onClick}>{resumed ? 'Retomar receita' : 'Ver ingredientes'} <ArrowRight size={18} aria-hidden="true" /></button>}
+      </div>
+    </article>
+  );
+}
+
+function RecipesScreen({ state, dispatch, headingRef }) {
+  const selected = state.equipment.none ? 'Sem equipamento' : equipmentOptions.filter((item) => item.key !== 'none' && state.equipment[item.key]).map((item) => item.label).join(' + ');
+  const shown = compatibleRecipes(state.equipment, state.search);
+  return (
+    <main className="page-content recipes-page">
+      <LevelCard xp={state.xp} />
+      <button className="text-back" type="button" onClick={dispatchType(dispatch, 'CHANGE_EQUIPMENT')}><ArrowLeft size={18} aria-hidden="true" /> Alterar equipamentos</button>
+      <ScreenIntro eyebrow="PRÓXIMA MISSÃO" title="Escolha sua receita" description="Mostrando receitas para os equipamentos selecionados." headingRef={headingRef}
+        after={<span className="filter-pill"><CookingPot size={16} aria-hidden="true" /> {selected}</span>} />
+      <div className="search-field">
+        <Search size={20} aria-hidden="true" />
+        <input type="search" aria-label="Buscar receitas" placeholder="Buscar receita" value={state.search}
+          onChange={(event) => dispatch({ type: 'SET_SEARCH', value: event.target.value })} />
+        {state.search && <button type="button" aria-label="Limpar busca" onClick={dispatchType(dispatch, 'SET_SEARCH', { value: '' })}><X size={19} aria-hidden="true" /></button>}
+      </div>
+      {shown.length ? (
+        <div className="recipe-list grid gap-3">
+          {shown.map((recipe) => <RecipeCard key={recipe.name} recipe={recipe} resumed={Boolean(state.prep)}
+            onClick={() => dispatch({ type: 'OPEN_WRAP', now: Date.now() })} />)}
+        </div>
+      ) : <div className="empty-card" role="status"><Search size={26} aria-hidden="true" /><strong>Nenhuma receita encontrada.</strong><p>Tente outro nome ou altere os equipamentos.</p></div>}
+      <p className="recipe-footnote"><Leaf size={17} aria-hidden="true" /> O wrap frio funciona com qualquer equipamento.</p>
+    </main>
+  );
+}
+
+function IngredientsScreen({ state, dispatch, headingRef }) {
+  const checkedCount = state.prep.checked.filter(Boolean).length;
+  return (
+    <main className="page-content prep-layout ingredients-page">
+      <section className="prep-primary">
+        <ScreenIntro eyebrow="ANTES DE COMEÇAR" title="Separe tudo antes de começar" description="Wrap frio · 1 porção · Você também vai usar um prato e uma colher." headingRef={headingRef} />
+        <div className="section-heading"><h2>Ingredientes</h2><span>{checkedCount} de 4 separados</span></div>
+        <div className="ingredient-list grid gap-2">
+          {ingredients.map((ingredient, index) => <label className={`ingredient-item ${state.prep.checked[index] ? 'checked' : ''}`} key={ingredient}>
+            <input type="checkbox" checked={state.prep.checked[index]} onChange={() => dispatch({ type: 'TOGGLE_INGREDIENT', index })} /><span>{ingredient}</span>
+          </label>)}
+        </div>
+      </section>
+      <section className="prep-secondary">
+        <div className="note-card"><Lightbulb size={19} aria-hidden="true" /><p>Deixe os ingredientes ao alcance antes de iniciar. Separá-los não concede XP.</p></div>
+        <ActionBar><PrimaryButton disabled={checkedCount !== ingredients.length} onClick={dispatchType(dispatch, 'START_RECIPE')}>Começar receita</PrimaryButton><p className="action-hint">Marque os 4 ingredientes para continuar.</p></ActionBar>
+      </section>
+    </main>
+  );
+}
+
+function StepScreen({ state, dispatch, headingRef, onValidate, onFinish }) {
+  const { prep } = state;
+  const step = steps[prep.stepIndex];
+  const validated = prep.validated[prep.stepIndex];
+  const validatedCount = prep.validated.filter(Boolean).length;
+  return (
+    <main className="page-content step-page prep-layout">
+      <section className="prep-primary">
+        <div className="step-progress" aria-label={`${validatedCount} de 4 etapas validadas`}>
+          <div className="step-progress-top"><span>Etapa {prep.stepIndex + 1} de 4</span><strong>{Math.round((validatedCount / 4) * 100)}%</strong></div>
+          <div className="progress-track" role="progressbar" aria-valuenow={validatedCount} aria-valuemin={0} aria-valuemax={4} aria-label="Etapas validadas"><div style={{ width: `${(validatedCount / 4) * 100}%` }} /></div>
+        </div>
+        <ScreenIntro eyebrow="HORA DE PREPARAR" title={step.instruction} description="Faça esta parte no seu ritmo. Depois, confirme o resultado." headingRef={headingRef} />
+      </section>
+      <section className="prep-secondary">
+        <div className="question-card"><div className="question-icon"><ChefHat size={24} aria-hidden="true" /></div><div><span>CONFIRA O RESULTADO</span><h2>{step.question}</h2></div></div>
+        {prep.hintOpen && !validated && <div className="tip-card" role="status" aria-live="polite"><Lightbulb size={21} aria-hidden="true" /><div><strong>Vamos ajustar juntos</strong><p>{step.tip}</p><p className="tip-cost">{prep.pendingTipDeduction > 0 ? 'A primeira Dica custa 1 XP, que será descontado no próximo ganho. ' : 'A primeira Dica descontou 1 XP. '}As etapas restantes valem 4 XP cada.</p></div></div>}
+        {validated && <div className="success-card" role="status" aria-live="polite"><CircleCheck size={23} aria-hidden="true" /><div><strong>Etapa validada! +{prep.stepXp[prep.stepIndex]} XP</strong><p>Boa! Você já pode seguir para a próxima parte.</p></div></div>}
+        <ActionBar>
+          {validated ? <PrimaryButton nextAction onClick={prep.stepIndex === 3 ? onFinish : dispatchType(dispatch, 'NEXT_STEP')}>{prep.stepIndex === 3 ? 'Concluir receita' : 'Próxima etapa'}</PrimaryButton>
+            : prep.hintOpen ? <><PrimaryButton onClick={onValidate}>Deu certo agora</PrimaryButton><button className="secondary-action" type="button" onClick={dispatchType(dispatch, 'CLOSE_ADJUSTMENT')}>Continuar nesta etapa</button></>
+              : <><PrimaryButton onClick={onValidate}>Deu certo</PrimaryButton><button className="secondary-action" type="button" onClick={dispatchType(dispatch, 'REQUEST_ADJUSTMENT')}>Dica</button></>}
+        </ActionBar>
+      </section>
+    </main>
+  );
+}
+
+function MedalList({ completed }) {
+  const upcoming = nextMedal(completed);
+  return <>
+    <div className="medal-list">{medals.map((medal) => {
+      const earned = completed >= medal.threshold;
+      return <div className={`medal-item ${earned ? 'earned' : ''}`} key={medal.name}>
+        <span className="medal-icon">{earned ? <Medal size={22} aria-hidden="true" /> : <LockKeyhole size={20} aria-hidden="true" />}</span>
+        <div><strong>{medal.name}</strong><small>{medal.threshold} receitas</small></div>
+        <span className="medal-state">{earned ? 'Conquistada' : 'Bloqueada'}</span>
+      </div>;
+    })}</div>
+    <p className="next-medal" role="status">{upcoming ? `${completed} de ${upcoming.threshold} receitas para ${upcoming.name}` : 'Todas as medalhas conquistadas!'}</p>
+  </>;
+}
+
+function CompletionScreen({ state, dispatch, headingRef }) {
+  const summary = state.latestCompletion;
+  return <main className="page-content completion-page completion-layout">
+    <section className="summary-primary">
+      <div className="completion-hero" aria-hidden="true"><span>🌯</span><Sparkles size={23} /></div>
+      <ScreenIntro eyebrow="MISSÃO CUMPRIDA" title="Wrap frio pronto!" description={`Você ganhou ${summary?.stepTotal ?? 20} XP pelas etapas e 100 XP pela receita.`} headingRef={headingRef} />
+      <div className="total-card"><div><span>Total deste preparo</span><strong>+{summary?.xpEarned ?? 120} XP</strong></div><p>Saldo acumulado: <strong>{state.xp} XP</strong></p></div>
+      {summary?.tipDeduction > 0 && <p className="deduction-note">A Dica descontou {summary.tipDeduction} XP neste preparo.</p>}
+      <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Conquista recebida: Wrap frio preparado</strong><p>Recebida {state.achievements.wrap} {state.achievements.wrap === 1 ? 'vez' : 'vezes'}.</p></div></div>
+    </section>
+    <section className="summary-secondary">
+      <div className="medal-section"><div className="section-heading"><h2>Suas medalhas</h2><span>{state.completed} preparos</span></div><p className="completed-count">Receitas concluídas: <strong>{state.completed}</strong></p>
+        {summary?.newMedal && <div className="new-medal" role="status"><Sparkles size={20} aria-hidden="true" /> Nova medalha: {summary.newMedal}!</div>}
+        <MedalList completed={state.completed} />
+      </div>
+      <ActionBar><PrimaryButton onClick={dispatchType(dispatch, 'VIEW_RECIPES')}>Ver receitas</PrimaryButton></ActionBar>
+    </section>
+  </main>;
+}
+
+function recordDate(record) {
+  return record.kind === 'demo' ? 'Demonstração' : formatDate(record.completedAt);
+}
+
+function RecordsScreen({ state, dispatch, headingRef }) {
+  return <main className="page-content records-page">
+    <ScreenIntro eyebrow="SEU HISTÓRICO" title="Seus registros" description="Cada receita concluída fica guardada aqui." headingRef={headingRef} />
+    <div className="records-total"><Sparkles size={20} aria-hidden="true" /><span>XP total acumulado</span><strong>{state.xp} XP</strong></div>
+    {state.records.length ? <>
+      <div className="record-cards">{state.records.map((record) => <article className="record-card" key={record.id}>
+        <div className="record-card-title"><span aria-hidden="true">🌯</span><strong>{record.recipe}</strong><b>+{record.xpEarned} XP</b></div>
+        <p>{recordDate(record)}</p><p>{record.durationMs === null ? 'Duração não registrada' : `Duração: ${formatDuration(record.durationMs)}`}</p><p>XP ganho: {record.xpEarned} XP</p>
+      </article>)}</div>
+      <table className="records-table"><caption>Preparos concluídos, do mais recente ao mais antigo</caption><thead><tr><th scope="col">Receita</th><th scope="col">Concluído em</th><th scope="col">Duração</th><th scope="col">XP ganho</th></tr></thead>
+        <tbody>{state.records.map((record) => <tr key={record.id}><th scope="row">{record.recipe}</th><td>{recordDate(record)}</td><td>{formatDuration(record.durationMs)}</td><td>{record.xpEarned} XP</td></tr>)}</tbody>
+      </table>
+    </> : <div className="empty-card record-empty"><BookOpen size={26} aria-hidden="true" /><strong>Nenhum preparo concluído ainda.</strong><p>Prepare o Wrap frio para criar seu primeiro registro.</p>
+      <button type="button" className="secondary-action" onClick={dispatchType(dispatch, 'NAVIGATE', { tab: 'recipes' })}>Explorar receitas</button></div>}
+  </main>;
+}
+
+function ProfileScreen({ state, dispatch, headingRef }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(state.profileName);
+  const [error, setError] = useState('');
+  const saveName = () => {
+    const name = draft.trim();
+    if (!name) { setError('Digite um nome para continuar.'); return; }
+    dispatch({ type: 'SET_PROFILE_NAME', name });
+    setError('');
+    setEditing(false);
+  };
+  return <main className="page-content profile-page">
+    <ScreenIntro eyebrow="SUA JORNADA" title="Seu perfil" headingRef={headingRef} />
+    <div className="profile-layout">
+      <section className="profile-primary">
+        <div className="identity-card">
+          <span className="avatar"><UserRound size={27} aria-hidden="true" /></span>
+          {editing ? <div className="name-editor"><label htmlFor="profile-name">Nome</label><input id="profile-name" autoFocus maxLength={30} value={draft} onChange={(event) => { setDraft(event.target.value); setError(''); }} />
+            {error && <p role="alert">{error}</p>}<div className="name-actions"><button type="button" onClick={saveName}>Salvar</button><button type="button" onClick={() => { setDraft(state.profileName); setError(''); setEditing(false); }}>Cancelar</button></div>
+          </div> : <div className="identity-name"><strong>{state.profileName}</strong><button type="button" onClick={() => { setDraft(state.profileName); setEditing(true); }}>Editar nome</button></div>}
+        </div>
+        <LevelCard xp={state.xp} />
+        <div className="profile-stat">Receitas concluídas: <strong>{state.completed}</strong></div>
+      </section>
+      <section className="profile-secondary">
+        <div className="section-heading"><h2>Medalhas</h2></div><MedalList completed={state.completed} />
+        <div className="profile-achievements"><div className="section-heading"><h2>Conquistas</h2></div>
+          {state.achievements.wrap > 0 ? <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Wrap frio preparado</strong><p>Recebida {state.achievements.wrap} {state.achievements.wrap === 1 ? 'vez' : 'vezes'}</p></div></div>
+            : <div className="empty-card"><p>Você ainda não recebeu conquistas.</p></div>}
+        </div>
+      </section>
+    </div>
+  </main>;
+}
+
+function PauseDialog({ open, dispatch }) {
+  const dialogRef = useRef(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', '');
+    } else if (!open && dialog.open) {
+      if (dialog.close) dialog.close(); else dialog.removeAttribute('open');
+    }
+  }, [open]);
+  return <dialog ref={dialogRef} className="pause-dialog" aria-labelledby="pause-title" aria-describedby="pause-description"
+    onCancel={(event) => { event.preventDefault(); dispatch({ type: 'CLOSE_PAUSE' }); }}>
+    <div className="dialog-icon"><Pause size={24} fill="currentColor" aria-hidden="true" /></div><h2 id="pause-title">Receita pausada.</h2><p id="pause-description">Seu progresso está salvo.</p>
+    <div className="dialog-actions"><PrimaryButton onClick={dispatchType(dispatch, 'CLOSE_PAUSE')} icon={false}>Continuar</PrimaryButton><button className="secondary-action" type="button" onClick={dispatchType(dispatch, 'LEAVE_FOR_RECIPES')}>Ir para receitas</button></div>
+  </dialog>;
+}
+
+const animationDurations = { step: 2000, completion: 5000, achievement: 1500, medal: 3000 };
+
+function AnimationLayer({ phase, onAdvance }) {
+  const skipRef = useRef(null);
+  useEffect(() => {
+    skipRef.current?.focus();
+    const timer = window.setTimeout(onAdvance, animationDurations[phase.kind]);
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onAdvance(); }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => { window.clearTimeout(timer); document.removeEventListener('keydown', onKeyDown, true); };
+  }, [phase, onAdvance]);
+  const isMedal = phase.kind === 'medal';
+  const content = {
+    step: { title: 'Etapa validada!', detail: `+${phase.points} XP`, icon: <CircleCheck size={48} aria-hidden="true" /> },
+    completion: { title: 'Wrap frio pronto!', detail: '+100 XP pela receita', icon: <span className="animation-wrap" aria-hidden="true">🌯</span> },
+    achievement: { title: 'Conquista recebida', detail: 'Wrap frio preparado', icon: <CircleCheck size={48} aria-hidden="true" /> },
+    medal: { title: `Nova medalha: ${phase.medalName}!`, detail: `${phase.medalThreshold} receitas concluídas`, icon: <Medal size={96} aria-hidden="true" /> },
+  }[phase.kind];
+  return <div className="animation-layer" onClick={onAdvance}>
+    <div className={`animation-card animation-${phase.kind} ${isMedal ? 'animation-card-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby="animation-title">
+      <div className="animation-icon">{content.icon}</div><h2 id="animation-title">{content.title}</h2><p>{content.detail}</p>
+      <button ref={skipRef} type="button" className="skip-button" onClick={(event) => { event.stopPropagation(); onAdvance(); }}>Pular</button>
+    </div>
+  </div>;
+}
+
+export default function App() {
+  const [state, dispatch] = useReducer(reducer, undefined, loadState);
+  const [animation, setAnimation] = useState(null);
+  const reducedMotion = useReducedMotion();
+  const headingRef = useRef(null);
+  const showTabs = ['equipment', 'recipes', 'records', 'profile'].includes(state.screen);
+
+  useEffect(() => { try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* Storage can be unavailable. */ } }, [state]);
+  useEffect(() => { if (!animation) headingRef.current?.focus(); }, [state.screen, state.prep?.stepIndex, animation]);
+
+  const advanceAnimation = useCallback(() => {
+    if (!animation) return;
+    if (animation.kind === 'step') {
+      setAnimation(null);
+      window.setTimeout(() => document.querySelector('[data-next-action]')?.focus(), 0);
+    } else if (animation.kind === 'completion') setAnimation({ ...animation, kind: 'achievement' });
+    else if (animation.kind === 'achievement' && animation.medalName) setAnimation({ ...animation, kind: 'medal' });
+    else { setAnimation(null); dispatch({ type: 'ANIMATIONS_DONE' }); }
+  }, [animation]);
+
+  useEffect(() => {
+    if (reducedMotion && animation) {
+      if (animation.kind !== 'step') dispatch({ type: 'ANIMATIONS_DONE' });
+      setAnimation(null);
+    }
+  }, [reducedMotion, animation]);
+
+  const validateStep = () => {
+    if (state.screen !== 'step' || state.prep?.validated[state.prep.stepIndex]) return;
+    const points = state.prep.tipUsed ? 4 : 5;
+    dispatch({ type: 'VALIDATE_STEP' });
+    if (!reducedMotion) setAnimation({ kind: 'step', points });
+  };
+
+  const finishRecipe = () => {
+    if (state.screen !== 'step' || !state.prep?.validated.every(Boolean)) return;
+    const action = { type: 'FINISH_RECIPE', now: Date.now() };
+    const next = reducer(state, action);
+    if (next === state) return;
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* The UI still works for this session. */ }
+    dispatch(action);
+    if (reducedMotion) dispatch({ type: 'ANIMATIONS_DONE' });
+    else setAnimation({ kind: 'completion', medalName: next.latestCompletion.newMedal, medalThreshold: next.latestCompletion.medalThreshold });
+  };
+
+  return <div className={`app-shell ${showTabs ? 'has-tabs' : 'is-preparing'}`}>
+    <div className="app-base" inert={Boolean(animation)}>
+      <Header xp={state.xp} canPause={['ingredients', 'step'].includes(state.screen)} onPause={dispatchType(dispatch, 'OPEN_PAUSE')} />
+      <div className={`app-layout ${showTabs ? 'with-nav' : 'flow-layout'}`}>
+        {showTabs && <MainNav screen={state.screen} dispatch={dispatch} />}
+        <div className="app-content">
+          {state.screen === 'equipment' && <EquipmentScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'recipes' && <RecipesScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'ingredients' && <IngredientsScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'step' && <StepScreen state={state} dispatch={dispatch} headingRef={headingRef} onValidate={validateStep} onFinish={finishRecipe} />}
+          {state.screen === 'complete' && <CompletionScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'records' && <RecordsScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'profile' && <ProfileScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+        </div>
+      </div>
+      <PauseDialog open={state.pauseOpen} dispatch={dispatch} />
+    </div>
+    {animation && <AnimationLayer phase={animation} onAdvance={advanceAnimation} />}
+  </div>;
+}

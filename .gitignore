@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.vite/
+coverage/
+.pnpm-store/
+.edge-qa/
+preview-mobile.png
+tmp/
+sites/
+output/sites/
+.env
+.env.*
+!.env.example
+*.log

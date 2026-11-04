@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <!-- Chef hat adapted from Lucide Icons. Copyright (c) 2026 Lucide Icons and Contributors.
+       Permission to use, copy, modify, and/or distribute this software for any
+       purpose with or without fee is hereby granted, provided that the above
+       copyright notice and this permission notice appear in all copies. -->
+  <title id="title">Cozinhe como um Chefe</title>
+  <desc id="desc">Chapéu de chef branco com brilho dourado em fundo verde</desc>
+  <rect width="64" height="64" rx="17" fill="#286b49"/>
+  <path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z" transform="translate(5 4) scale(2.2)" fill="none" stroke="#fff" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M6 17h12" transform="translate(5 4) scale(2.2)" fill="none" stroke="#fff" stroke-width="1.65" stroke-linecap="round"/>
+  <path d="M49 9l1.4 4.6L55 15l-4.6 1.4L49 21l-1.4-4.6L43 15l4.6-1.4Z" fill="#f4c35c"/>
+</svg>
