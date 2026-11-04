@@ -10,5 +10,4 @@ sites/
 output/sites/
 .env
 .env.*
-!.env.example
 *.log

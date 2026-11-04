@@ -2,13 +2,16 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BookOpen, Check, ChefHat, CircleCheck, CircleSlash,
   Clock3, CookingPot, Flame, Leaf, Lightbulb, LockKeyhole, Medal, Microwave,
-  Pause, Search, Sparkles, Square, UserRound, Wind, X, Zap,
+  Pause, Pencil, Search, Settings2, Sparkles, Square, UserRound, Wind, X, Zap,
 } from 'lucide-react';
 import { medals, recipeById, recipes } from './data.js';
 import {
   compatibleRecipes, formatDate, formatDuration, levelProgress, loadState,
-  nextMedal, reducer, selectedEquipment, STORAGE_KEY,
+  nextMedal, prepRecipe, reducer, selectedEquipment, STORAGE_KEY,
 } from './state.js';
+import { HomePage } from './HomePage.jsx';
+import { MineScreen, RecipeEditor, SettingsScreen } from './PersonalPages.jsx';
+import { themeColors } from './theme.js';
 
 const dispatchType = (dispatch, type, extra = {}) => () => dispatch({ type, ...extra });
 
@@ -36,10 +39,11 @@ function PrimaryButton({ children, onClick, disabled = false, icon = true, nextA
   );
 }
 
-function Header({ xp, canPause, onPause }) {
+function Header({ xp, canPause, onPause, onBack }) {
   return (
     <header className="app-header">
       <div className="header-inner flex items-center justify-between gap-2.5">
+        {canPause && <button className="header-back" type="button" onClick={onBack}><ArrowLeft size={18} aria-hidden="true" /> Voltar</button>}
         <div className="brand flex items-center gap-2" aria-label="Cozinhe como um Chefe">
           <img className="brand-mark" src={`${import.meta.env.BASE_URL}logo.svg`} alt="" aria-hidden="true" />
           <span className="brand-name">Cozinhe <strong>como um Chefe</strong></span>
@@ -57,6 +61,7 @@ function MainNav({ screen, dispatch }) {
   const active = ['equipment', 'recipes'].includes(screen) ? 'recipes' : screen;
   const tabs = [
     { key: 'recipes', label: 'Receitas', Icon: BookOpen },
+    { key: 'mine', label: 'Minhas Receitas', Icon: Pencil },
     { key: 'records', label: 'Registros', Icon: Clock3 },
     { key: 'profile', label: 'Perfil', Icon: UserRound },
   ];
@@ -67,10 +72,11 @@ function MainNav({ screen, dispatch }) {
           key={key}
           type="button"
           className={`nav-tab ${active === key ? 'active' : ''}`}
+          aria-label={label}
           aria-current={active === key ? 'page' : undefined}
           onClick={dispatchType(dispatch, 'NAVIGATE', { tab: key })}
         >
-          <Icon size={20} strokeWidth={2} aria-hidden="true" /><span>{label}</span>
+          <Icon size={20} strokeWidth={2} aria-hidden="true" /><span className={key === 'mine' ? 'nav-mine-short' : undefined}>{key === 'mine' ? 'Minhas' : label}</span>{key === 'mine' && <span className="nav-mine-wide">Minhas Receitas</span>}
         </button>
       ))}
     </nav>
@@ -195,7 +201,7 @@ function RecipesScreen({ state, dispatch, headingRef }) {
 }
 
 function IngredientsScreen({ state, dispatch, headingRef }) {
-  const recipe = recipeById(state.prep.recipeId);
+  const recipe = prepRecipe(state.prep);
   const checkedCount = state.prep.checked.filter(Boolean).length;
   return (
     <main className="page-content prep-layout ingredients-page">
@@ -219,7 +225,7 @@ function IngredientsScreen({ state, dispatch, headingRef }) {
 
 function StepScreen({ state, dispatch, headingRef, onValidate, onFinish }) {
   const { prep } = state;
-  const recipe = recipeById(prep.recipeId);
+  const recipe = prepRecipe(prep);
   const stepCount = recipe.steps.length;
   const step = recipe.steps[prep.stepIndex];
   const validated = prep.validated[prep.stepIndex];
@@ -264,12 +270,12 @@ function MedalList({ completed }) {
 
 function CompletionScreen({ state, dispatch, headingRef }) {
   const summary = state.latestCompletion;
-  const recipe = recipeById(summary?.recipeId) ?? recipeById('wrap');
+  const recipe = { id: summary?.recipeId, name: summary?.recipeName ?? recipeById(summary?.recipeId)?.name ?? 'Receita', emoji: summary?.recipeEmoji ?? '🍽️', steps: [] };
   const earnedCount = state.achievements[recipe.id] ?? 0;
   return <main className="page-content completion-page completion-layout">
     <section className="summary-primary">
       <div className="completion-hero" aria-hidden="true"><span>{recipe.emoji}</span><Sparkles size={23} /></div>
-      <ScreenIntro eyebrow="MISSÃO CUMPRIDA" title={`${recipe.name} pronto!`} description={`Você ganhou ${summary?.stepTotal ?? recipe.steps.length * 5} XP pelas etapas e 100 XP pela receita.`} headingRef={headingRef} />
+      <ScreenIntro eyebrow="MISSÃO CUMPRIDA" title={`${recipe.name} pronto!`} description={`Você ganhou ${summary?.stepTotal ?? 0} XP pelas etapas e 100 XP pela receita.`} headingRef={headingRef} />
       <div className="total-card"><div><span>Total deste preparo</span><strong>+{summary?.xpEarned ?? 120} XP</strong></div><p>Saldo acumulado: <strong>{state.xp} XP</strong></p></div>
       {summary?.tipDeduction > 0 && <p className="deduction-note">A Dica descontou {summary.tipDeduction} XP neste preparo.</p>}
       <div className="achievement-card"><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>Conquista recebida: {recipe.name} preparado</strong><p>Recebida {earnedCount} {earnedCount === 1 ? 'vez' : 'vezes'}.</p></div></div>
@@ -294,22 +300,31 @@ function RecordsScreen({ state, dispatch, headingRef }) {
     <div className="records-total"><Sparkles size={20} aria-hidden="true" /><span>XP total acumulado</span><strong>{state.xp} XP</strong></div>
     {state.records.length ? <>
       <div className="record-cards">{state.records.map((record) => <article className="record-card" key={record.id}>
-        <div className="record-card-title"><span aria-hidden="true">{recipeById(record.recipeId)?.emoji ?? '🌯'}</span><strong>{record.recipe}</strong><b>+{record.xpEarned} XP</b></div>
+        <div className="record-card-title"><span aria-hidden="true">{record.emoji ?? recipeById(record.recipeId)?.emoji ?? '🌯'}</span><strong>{record.recipe}</strong>{record.source === 'personal' && <span className="personal-record-badge">Minha receita</span>}<b>+{record.xpEarned} XP</b></div>
         <p>{recordDate(record)}</p><p>{record.durationMs === null ? 'Duração não registrada' : `Duração: ${formatDuration(record.durationMs)}`}</p><p>XP ganho: {record.xpEarned} XP</p>
       </article>)}</div>
       <table className="records-table"><caption>Preparos concluídos, do mais recente ao mais antigo</caption><thead><tr><th scope="col">Receita</th><th scope="col">Concluído em</th><th scope="col">Duração</th><th scope="col">XP ganho</th></tr></thead>
-        <tbody>{state.records.map((record) => <tr key={record.id}><th scope="row">{record.recipe}</th><td>{recordDate(record)}</td><td>{formatDuration(record.durationMs)}</td><td>{record.xpEarned} XP</td></tr>)}</tbody>
+        <tbody>{state.records.map((record) => <tr key={record.id}><th scope="row">{record.recipe}{record.source === 'personal' && <span className="personal-record-badge">Minha receita</span>}</th><td>{recordDate(record)}</td><td>{formatDuration(record.durationMs)}</td><td>{record.xpEarned} XP</td></tr>)}</tbody>
       </table>
     </> : <div className="empty-card record-empty"><BookOpen size={26} aria-hidden="true" /><strong>Nenhum preparo concluído ainda.</strong><p>Escolha uma receita para criar seu primeiro registro.</p>
       <button type="button" className="secondary-action" onClick={dispatchType(dispatch, 'NAVIGATE', { tab: 'recipes' })}>Explorar receitas</button></div>}
   </main>;
 }
 
-function ProfileScreen({ state, dispatch, headingRef }) {
+function ProfileScreen({ state, dispatch, headingRef, catalog }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(state.profileName);
   const [error, setError] = useState('');
-  const earnedRecipes = recipes.filter((recipe) => (state.achievements[recipe.id] ?? 0) > 0);
+  const earnedRecipes = Object.entries(state.achievements).filter(([, count]) => count > 0).map(([id, count]) => ({
+    id, count,
+    name: state.personalRecipes.find((item) => item.id === id)?.name
+      ?? state.records.find((item) => item.recipeId === id)?.recipe
+      ?? catalog.find((item) => item.id === id)?.name
+      ?? recipeById(id)?.name ?? 'Receita',
+    emoji: state.personalRecipes.find((item) => item.id === id)?.emoji
+      ?? state.records.find((item) => item.recipeId === id)?.emoji
+      ?? catalog.find((item) => item.id === id)?.emoji ?? '🍽️',
+  }));
   const saveName = () => {
     const name = draft.trim();
     if (!name) { setError('Digite um nome para continuar.'); return; }
@@ -318,11 +333,12 @@ function ProfileScreen({ state, dispatch, headingRef }) {
     setEditing(false);
   };
   return <main className="page-content profile-page">
+    <button type="button" className="profile-settings-button" onClick={() => dispatch({ type: 'OPEN_SETTINGS' })}><Settings2 size={20} aria-hidden="true" /> Configurações</button>
     <ScreenIntro eyebrow="SUA JORNADA" title="Seu perfil" headingRef={headingRef} />
     <div className="profile-layout">
       <section className="profile-primary">
         <div className="identity-card">
-          <span className="avatar"><UserRound size={27} aria-hidden="true" /></span>
+          <span className="avatar">{state.profilePhoto ? <img src={state.profilePhoto} alt="Foto de perfil" /> : <UserRound size={27} aria-hidden="true" />}</span>
           {editing ? <div className="name-editor"><label htmlFor="profile-name">Nome</label><input id="profile-name" autoFocus maxLength={30} value={draft} onChange={(event) => { setDraft(event.target.value); setError(''); }} />
             {error && <p role="alert">{error}</p>}<div className="name-actions"><button type="button" onClick={saveName}>Salvar</button><button type="button" onClick={() => { setDraft(state.profileName); setError(''); setEditing(false); }}>Cancelar</button></div>
           </div> : <div className="identity-name"><strong>{state.profileName}</strong><button type="button" onClick={() => { setDraft(state.profileName); setEditing(true); }}>Editar nome</button></div>}
@@ -333,7 +349,7 @@ function ProfileScreen({ state, dispatch, headingRef }) {
       <section className="profile-secondary">
         <div className="section-heading"><h2>Medalhas</h2></div><MedalList completed={state.completed} />
         <div className="profile-achievements"><div className="section-heading"><h2>Conquistas</h2></div>
-          {earnedRecipes.length ? earnedRecipes.map((recipe) => <div className="achievement-card" key={recipe.id}><span className="achievement-icon"><CircleCheck size={22} aria-hidden="true" /></span><div><strong>{recipe.name} preparado</strong><p>Recebida {state.achievements[recipe.id]} {state.achievements[recipe.id] === 1 ? 'vez' : 'vezes'}</p></div></div>)
+          {earnedRecipes.length ? earnedRecipes.map((recipe) => <div className="achievement-card" key={recipe.id}><span className="achievement-icon" aria-hidden="true">{recipe.emoji}</span><div><strong>{recipe.name} preparado</strong><p>Recebida {recipe.count} {recipe.count === 1 ? 'vez' : 'vezes'}</p></div></div>)
             : <div className="empty-card"><p>Você ainda não recebeu conquistas.</p></div>}
         </div>
       </section>
@@ -363,11 +379,14 @@ const animationDurations = { step: 2000, completion: 5000, achievement: 1500, me
 
 function AnimationLayer({ phase, onAdvance }) {
   const skipRef = useRef(null);
+  const advancedRef = useRef(false);
+  const advanceOnce = () => { if (advancedRef.current) return; advancedRef.current = true; onAdvance(); };
   useEffect(() => {
+    advancedRef.current = false;
     skipRef.current?.focus();
-    const timer = window.setTimeout(onAdvance, animationDurations[phase.kind]);
+    const timer = window.setTimeout(advanceOnce, animationDurations[phase.kind]);
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onAdvance(); }
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); advanceOnce(); }
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => { window.clearTimeout(timer); document.removeEventListener('keydown', onKeyDown, true); };
@@ -379,10 +398,10 @@ function AnimationLayer({ phase, onAdvance }) {
     achievement: { title: 'Conquista recebida', detail: `${phase.recipeName} preparado`, icon: <CircleCheck size={48} aria-hidden="true" /> },
     medal: { title: `Nova medalha: ${phase.medalName}!`, detail: `${phase.medalThreshold} receitas concluídas`, icon: <Medal size={96} aria-hidden="true" /> },
   }[phase.kind];
-  return <div className="animation-layer" onClick={onAdvance}>
+  return <div className="animation-layer" onClick={advanceOnce}>
     <div className={`animation-card animation-${phase.kind} ${isMedal ? 'animation-card-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby="animation-title">
       <div className="animation-icon">{content.icon}</div><h2 id="animation-title">{content.title}</h2><p>{content.detail}</p>
-      <button ref={skipRef} type="button" className="skip-button" onClick={(event) => { event.stopPropagation(); onAdvance(); }}>Pular</button>
+      <button ref={skipRef} type="button" className="skip-button" onClick={(event) => { event.stopPropagation(); advanceOnce(); }}>Pular</button>
     </div>
   </div>;
 }
@@ -392,7 +411,34 @@ export default function App() {
   const [animation, setAnimation] = useState(null);
   const reducedMotion = useReducedMotion();
   const headingRef = useRef(null);
-  const showTabs = ['equipment', 'recipes', 'records', 'profile'].includes(state.screen);
+  const showTabs = ['recipes', 'mine', 'records', 'profile'].includes(state.screen);
+
+  useEffect(() => {
+    const colors = themeColors(state.accent, state.theme);
+    const root = document.documentElement;
+    root.dataset.theme = state.theme;
+    root.style.setProperty('--accent', colors.accent);
+    root.style.setProperty('--accent-ink', colors.accentInk);
+    root.style.setProperty('--accent-mission', colors.accentMission);
+    root.style.setProperty('--accent-foreground', colors.buttonText);
+  }, [state.accent, state.theme]);
+
+  useEffect(() => {
+    const route = { recipes: '#/receitas', mine: '#/minhas-receitas', records: '#/registros', profile: '#/perfil' }[state.screen];
+    if (route && window.location.hash !== route) window.history.replaceState(null, '', route);
+  }, [state.screen]);
+  useEffect(() => {
+    const onHashChange = () => {
+      const route = { '#/receitas': 'recipes', '#/minhas-receitas': 'mine', '#/registros': 'records', '#/perfil': 'profile' }[window.location.hash];
+      if (route) dispatch({ type: 'ROUTE_TO', tab: route });
+      else {
+        window.history.replaceState(null, '', '#/receitas');
+        dispatch({ type: 'ROUTE_TO', tab: 'recipes' });
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   useEffect(() => { try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch { /* Storage can be unavailable. */ } }, [state]);
   useEffect(() => { if (!animation) headingRef.current?.focus(); }, [state.screen, state.prep?.stepIndex, animation]);
@@ -430,24 +476,25 @@ export default function App() {
     dispatch(action);
     if (reducedMotion) dispatch({ type: 'ANIMATIONS_DONE' });
     else {
-      const recipe = recipeById(next.latestCompletion.recipeId);
-      setAnimation({ kind: 'completion', recipeName: recipe.name, recipeEmoji: recipe.emoji, medalName: next.latestCompletion.newMedal, medalThreshold: next.latestCompletion.medalThreshold });
+      setAnimation({ kind: 'completion', recipeName: next.latestCompletion.recipeName, recipeEmoji: next.latestCompletion.recipeEmoji, medalName: next.latestCompletion.newMedal, medalThreshold: next.latestCompletion.medalThreshold });
     }
   };
 
   return <div className={`app-shell ${showTabs ? 'has-tabs' : 'is-preparing'}`}>
     <div className="app-base" inert={Boolean(animation)}>
-      <Header xp={state.xp} canPause={['ingredients', 'step'].includes(state.screen)} onPause={dispatchType(dispatch, 'OPEN_PAUSE')} />
+      <Header xp={state.xp} canPause={['ingredients', 'step'].includes(state.screen)} onPause={dispatchType(dispatch, 'OPEN_PAUSE')} onBack={dispatchType(dispatch, 'LEAVE_PREP')} />
       <div className={`app-layout ${showTabs ? 'with-nav' : 'flow-layout'}`}>
         {showTabs && <MainNav screen={state.screen} dispatch={dispatch} />}
         <div className="app-content">
-          {state.screen === 'equipment' && <EquipmentScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
-          {state.screen === 'recipes' && <RecipesScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'recipes' && <HomePage state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'mine' && <MineScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'editor' && <RecipeEditor key={state.editorContext?.id ?? state.editorContext?.source?.id ?? 'new'} state={state} dispatch={dispatch} context={state.editorContext} headingRef={headingRef} />}
           {state.screen === 'ingredients' && <IngredientsScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
           {state.screen === 'step' && <StepScreen state={state} dispatch={dispatch} headingRef={headingRef} onValidate={validateStep} onFinish={finishRecipe} />}
           {state.screen === 'complete' && <CompletionScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
           {state.screen === 'records' && <RecordsScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
-          {state.screen === 'profile' && <ProfileScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
+          {state.screen === 'profile' && <ProfileScreen state={state} dispatch={dispatch} headingRef={headingRef} catalog={recipes} />}
+          {state.screen === 'settings' && <SettingsScreen state={state} dispatch={dispatch} headingRef={headingRef} />}
         </div>
       </div>
       <PauseDialog open={state.pauseOpen} dispatch={dispatch} />

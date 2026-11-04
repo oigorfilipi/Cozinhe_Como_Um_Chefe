@@ -11,6 +11,7 @@ import {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.history.replaceState(null, '', '#/receitas');
   window.matchMedia = (query) => ({ matches: false, media: query, addEventListener() {}, removeEventListener() {} });
 });
 afterEach(() => cleanup());
@@ -29,7 +30,6 @@ function flowState({ openingXp = 0, openedAt = 1000 } = {}) {
 async function startUiPrep(user, { seed = false } = {}) {
   if (seed) await user.click(screen.getByRole('button', { name: /Iniciar demonstração com 9 preparos/ }));
   await user.click(screen.getByRole('button', { name: 'Sem equipamento' }));
-  await user.click(screen.getByRole('button', { name: 'Ver receitas' }));
   await user.click(within(screen.getByRole('article', { name: 'Wrap frio' })).getByRole('button', { name: 'Ver ingredientes' }));
   for (const ingredient of ingredients) await user.click(screen.getByRole('checkbox', { name: ingredient }));
   await user.click(screen.getByRole('button', { name: 'Começar receita' }));
@@ -76,7 +76,7 @@ describe('persistência e pontuação', () => {
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
     const migrated = loadState();
-    expect(migrated.version).toBe(3);
+    expect(migrated.version).toBe(4);
     expect(migrated.xp).toBe(245);
     expect(migrated.completed).toBe(2);
     expect(migrated.achievements.wrap).toBe(2);
@@ -206,8 +206,7 @@ describe('interface e animações', () => {
     const recipe = recipeById('frango-frito');
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Fogão' }));
-    await user.click(screen.getByRole('button', { name: 'Ver receitas' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar receitas' }), 'frango frito');
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar por nome ou ingrediente' }), 'frango frito');
     await user.click(within(screen.getByRole('article', { name: recipe.name })).getByRole('button', { name: 'Ver ingredientes' }));
     expect(screen.getByText(/frango deve atingir 74 °C no centro/i)).toBeInTheDocument();
     for (const ingredient of recipe.ingredients) await user.click(screen.getByRole('checkbox', { name: ingredient }));
@@ -223,12 +222,11 @@ describe('interface e animações', () => {
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)).achievements[recipe.id]).toBe(1);
   });
 
-  it('mantém busca ao trocar de aba, limpa ao alterar equipamentos e permite editar o perfil', async () => {
+  it('mantém busca ao trocar de aba e equipamento e permite editar o perfil', async () => {
     const user = userEvent.setup();
     render(<App />);
     await user.click(screen.getByRole('button', { name: 'Sem equipamento' }));
-    await user.click(screen.getByRole('button', { name: 'Ver receitas' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Buscar receitas' }), 'bolo');
+    await user.type(screen.getByRole('searchbox', { name: 'Buscar por nome ou ingrediente' }), 'bolo');
     expect(screen.getByText('Nenhuma receita encontrada.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Perfil' }));
     expect(screen.getByRole('heading', { name: 'Seu perfil' })).toBeInTheDocument();
@@ -241,11 +239,10 @@ describe('interface e animações', () => {
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
     expect(screen.getByText('Ana')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Receitas' }));
-    expect(screen.getByRole('searchbox', { name: 'Buscar receitas' })).toHaveValue('bolo');
-    await user.click(screen.getByRole('button', { name: 'Alterar equipamentos' }));
+    expect(screen.getByRole('searchbox', { name: 'Buscar por nome ou ingrediente' })).toHaveValue('bolo');
+    await user.click(screen.getByRole('button', { name: 'Alterar' }));
     await user.click(screen.getByRole('button', { name: 'Micro-ondas' }));
-    await user.click(screen.getByRole('button', { name: 'Ver receitas' }));
-    expect(screen.getByRole('searchbox', { name: 'Buscar receitas' })).toHaveValue('');
+    expect(screen.getByRole('searchbox', { name: 'Buscar por nome ou ingrediente' })).toHaveValue('bolo');
     expect(screen.getByRole('heading', { name: 'Bolo de caneca de chocolate' })).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)).profileName).toBe('Ana');
   });
@@ -287,7 +284,7 @@ describe('interface e animações', () => {
     const enteredAt = JSON.parse(window.localStorage.getItem(STORAGE_KEY)).prep.enteredAt;
     view.unmount();
     render(<App />);
-    await user.click(screen.getByRole('button', { name: 'Retomar receita' }));
+    await user.click(screen.getByRole('button', { name: 'Retomar preparo' }));
     expect(screen.getByText('Vamos ajustar juntos')).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)).prep.enteredAt).toBe(enteredAt);
     await user.click(screen.getByRole('button', { name: 'Deu certo agora' }));

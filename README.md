@@ -10,14 +10,14 @@ Este é um protótipo acadêmico da VT de Gamificação Aplicada. Foi feito em R
 
 ## Demonstração
 
-**[Abrir o protótipo no PC ou celular](https://oigorfilipi.github.io/Cozinhe_Como_Um_Chefe/)**. O endereço do repositório mostra os arquivos; este link abre o aplicativo para o professor navegar.
+**[Abrir o site no GitHub Pages](https://oigorfilipi.github.io/Cozinhe_Como_Um_Chefe/)**. O mesmo endereço funciona no celular e no computador.
 
 O catálogo tem **62 receitas jogáveis**: 10 para cada um dos cinco aparelhos e 12 sem aquecimento. Em cada aparelho há cinco receitas simples e cinco elaboradas; no grupo sem equipamento, seis de cada tipo. O wrap original continua disponível.
 
 ## Como funciona
 
-1. Escolha Fogão, Air fryer, Forno, Micro-ondas, Panela elétrica ou Sem equipamento.
-2. Busque pelo nome ou ingrediente, filtre por dificuldade, abra uma receita e marque seus ingredientes.
+1. No painel inicial, acompanhe nível, XP e próxima medalha. Escolha Fogão, Air fryer, Forno, Micro-ondas, Panela elétrica ou Sem equipamento.
+2. Busque pelo nome ou ingrediente, filtre por dificuldade ou favoritas, abra uma receita e marque seus ingredientes.
 3. Faça a etapa na cozinha e toque em **Deu certo** depois de conferir o resultado.
 4. Se precisar, toque em **Dica**. Ela orienta sem avançar a etapa.
 5. Após validar todas as etapas, conclua a receita e veja o preparo em **Registros**.
@@ -32,6 +32,18 @@ O catálogo tem **62 receitas jogáveis**: 10 para cada um dos cinco aparelhos e
 | Medalhas | Aos 10, 20, 30, 40 e 50 preparos concluídos |
 
 As animações de etapa, conquista e medalha podem ser puladas com toque, clique ou **Esc**. A preferência por movimento reduzido é respeitada. O preparo pode ser pausado e retomado.
+
+## Minhas Receitas e personalização
+
+A página **Minhas Receitas** abre diretamente em `#/minhas-receitas`, inclusive no GitHub Pages. É possível criar uma receita, copiar uma das 62 padrão, editar, excluir e preparar. Cada etapa própria exige instrução, conferência do resultado e Dica. **Salvar rascunho não dá XP.** O primeiro preparo completo da versão própria deixa a receita **Testada**; uma versão editada volta a **Rascunho** e, após novo preparo, fica **Aprimorada**. Os Registros guardam o nome usado em cada preparo, mesmo após renomear ou excluir a receita.
+
+Os botões **Exportar backup** e **Importar backup** em Minhas Receitas permitem guardar e restaurar receitas próprias e o restante dos dados locais. A importação substitui o estado local depois de confirmação. Em Perfil → Configurações, há foto de perfil reduzida no dispositivo, tema claro/escuro e cor principal livre. A cor escolhida adapta texto e ícones para manter contraste legível.
+
+## Catálogo padrão no Git
+
+As **62 receitas padrão estão incluídas no código** e são iguais para todos que abrem a mesma versão do site. O catálogo não pode ser editado nem excluído pela interface. Para corrigir ou acrescentar uma receita padrão, altere o código do repositório e publique uma nova versão no GitHub Pages.
+
+As receitas criadas ou copiadas em **Minhas Receitas** pertencem apenas ao navegador da pessoa. Elas podem ser editadas e excluídas pela interface. O aplicativo não tem conta nem banco de dados; por isso, use **Exportar backup** para guardar seus dados antes de limpar o navegador ou trocar de aparelho.
 
 ## Testar no computador
 
@@ -49,7 +61,7 @@ pnpm test
 pnpm build
 ```
 
-Há 24 testes automatizados. Eles cobrem XP, Dica com saldo zero, níveis, catálogo por equipamento, receitas com quantidades diferentes de etapas, busca, retomada, Registros, medalha e animações. O PDF da VT registra os percursos de conclusão e exceção com resultados esperados e observados.
+Os testes automatizados cobrem XP, Dica com saldo zero, níveis, catálogo por equipamento, receitas próprias, busca, favoritas, retomada, Registros, medalha, animações, migração, backup, contraste e ausência de controles para editar ou excluir receitas padrão.
 
 ## Demonstração da medalha
 
@@ -57,7 +69,7 @@ Na tela inicial, toque em **Iniciar demonstração com 9 preparos**. Esses nove 
 
 ## Limites e privacidade
 
-- O app guarda progresso apenas no `localStorage` do navegador. Não há conta, banco de dados nem sincronização entre dispositivos.
+- Progresso, receitas próprias, fotos, preferências e favoritos ficam no `localStorage` do navegador. O catálogo padrão vem do código publicado no GitHub Pages.
 - O tempo do Registro vai da entrada na receita até **Concluir receita**, incluindo checklist, pausa e tempo com a página fechada.
 - Confirmar uma etapa não comprova que a pessoa cozinhou. O protótipo não registra todas as tentativas abandonadas; a avaliação de impacto descrita no PDF é um **plano futuro**, com meta hipotética de 50% para 70% em quatro semanas.
 - O app não tem recursos sociais. O tom de apoio e a possibilidade de cozinhar acompanhado são o vínculo atual com pertencimento.
@@ -67,6 +79,8 @@ Na tela inicial, toque em **Iniciar demonstração com 9 preparos**. Esses nove 
 Os tempos são aproximados e variam conforme o aparelho. Use recipientes indicados para micro-ondas, respeite o manual da panela elétrica e confirme o centro de carnes com termômetro culinário. As etapas com frango pedem **74 °C**; peixe pede **63 °C** ou carne opaca que se separa com garfo. Higienize as mãos e utensílios após contato com alimentos crus. Essas orientações seguem a [tabela de temperaturas do FoodSafety.gov](https://www.foodsafety.gov/food-safety-charts/safe-minimum-internal-temperatures), as [quatro etapas de segurança alimentar](https://www.foodsafety.gov/keep-food-safe/4-steps-to-food-safety) e a [cartilha de boas práticas da Anvisa](https://www.gov.br/anvisa/pt-br/arquivos-noticias-anvisa/812json-file-1/%40%40download/file).
 
 ## Materiais da VT
+
+Os arquivos abaixo documentam a versão acadêmica anterior (V3). A V4 acrescenta receitas pessoais, favoritos e personalização, descritos neste README e disponíveis no site.
 
 - [Apresentação principal em PDF](output/pdf/Cozinhe_como_um_Chefe_Projeto.pdf)
 - [Memorial técnico em DOCX](output/docx/Memorial_Tecnico_Cozinhe_como_um_Chefe.docx)
