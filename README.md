@@ -17,7 +17,7 @@ O catálogo tem **62 receitas jogáveis**: 10 para cada um dos cinco aparelhos e
 ## Como funciona
 
 1. No painel inicial, acompanhe nível, XP e próxima medalha. Escolha Fogão, Air fryer, Forno, Micro-ondas, Panela elétrica ou Sem equipamento.
-2. Busque pelo nome ou ingrediente, filtre por dificuldade ou favoritas, abra uma receita e marque seus ingredientes.
+2. Na página inicial, busque pelo nome ou ingrediente e marque receitas padrão como favoritas, mesmo antes de escolher os equipamentos. Depois, filtre por dificuldade, abra uma receita e marque seus ingredientes.
 3. Faça a etapa na cozinha e toque em **Deu certo** depois de conferir o resultado.
 4. Se precisar, toque em **Dica**. Ela orienta sem avançar a etapa.
 5. Após validar todas as etapas, conclua a receita e veja o preparo em **Registros**.
@@ -37,7 +37,7 @@ As animações de etapa, conquista e medalha podem ser puladas com toque, clique
 
 A página **Minhas Receitas** abre diretamente em `#/minhas-receitas`, inclusive no GitHub Pages. É possível criar uma receita, copiar uma das 62 padrão, editar, excluir e preparar. Cada etapa própria exige instrução, conferência do resultado e Dica. **Salvar rascunho não dá XP.** O primeiro preparo completo da versão própria deixa a receita **Testada**; uma versão editada volta a **Rascunho** e, após novo preparo, fica **Aprimorada**. Os Registros guardam o nome usado em cada preparo, mesmo após renomear ou excluir a receita.
 
-Os botões **Exportar backup** e **Importar backup** em Minhas Receitas permitem guardar e restaurar receitas próprias e o restante dos dados locais. A importação substitui o estado local depois de confirmação. Em Perfil → Configurações, há foto de perfil reduzida no dispositivo, tema claro/escuro e cor principal livre. A cor escolhida adapta texto e ícones para manter contraste legível.
+Os botões **Exportar backup** e **Importar backup** em Minhas Receitas permitem guardar e restaurar receitas próprias e o restante dos dados locais. A importação substitui o estado local depois de confirmação. O botão **Visual** no topo abre diretamente as configurações de foto de perfil, tema claro/escuro e cor geral livre. As áreas principais, os botões, os detalhes e o painel de missão acompanham a cor escolhida, com texto adaptado para manter contraste legível.
 
 ## Catálogo padrão no Git
 

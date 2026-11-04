@@ -95,17 +95,32 @@ describe('interface V4 e permissões', () => {
     render(<App />);
     const search = screen.getByRole('searchbox', { name: 'Buscar por nome ou ingrediente' });
     await user.type(search, 'wrap');
-    expect(screen.getByText('Escolha seus equipamentos para ver receitas.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Sem equipamento' }));
     const card = screen.getByRole('article', { name: 'Wrap frio' });
     await user.click(within(card).getByRole('button', { name: 'Adicionar aos favoritos' }));
     await user.click(screen.getByRole('button', { name: 'Favoritas' }));
     expect(screen.getByRole('article', { name: 'Wrap frio' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Sem equipamento' }));
     await user.click(within(card).getByRole('button', { name: 'Criar cópia' }));
     expect(screen.getByText('Cópia de Wrap frio')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Salvar rascunho' }));
     expect(screen.getByRole('heading', { name: 'Minhas Receitas' })).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(STORAGE_KEY)).xp).toBe(0);
+  });
+
+  it('abre a personalização direto da página inicial e retorna a ela', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Personalizar o site' }));
+    expect(screen.getByRole('heading', { name: 'Configurações' })).toBeInTheDocument();
+    expect(screen.getByText('Escolher foto')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Escuro' }));
+    await user.clear(screen.getByRole('textbox', { name: 'Hexadecimal' }));
+    await user.type(screen.getByRole('textbox', { name: 'Hexadecimal' }), '#8000FF');
+    await user.click(screen.getByRole('button', { name: 'Aplicar cor' }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#8000FF');
+    await user.click(screen.getByRole('button', { name: 'Voltar' }));
+    expect(screen.getByRole('heading', { name: 'Receitas' })).toBeInTheDocument();
   });
 
   it('mantém receitas padrão apenas para preparo ou cópia e não abre administração', async () => {

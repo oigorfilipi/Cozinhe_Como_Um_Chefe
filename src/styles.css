@@ -511,3 +511,92 @@ h1:focus { outline: none; }
 [data-theme="dark"] .records-table thead th { background: #25372b; color: #d7e5d8; }
 [data-theme="dark"] .records-table th, [data-theme="dark"] .records-table td { border-color: #3b5142; }
 [data-theme="dark"] .question-card h2, [data-theme="dark"] .empty-card strong, [data-theme="dark"] .profile-stat strong { color: #f4f7f2; }
+
+/* The selected color shapes the entire interface, including large surfaces. */
+:root {
+  --page-surface: color-mix(in srgb, var(--accent, #286b49) 4%, #faf9f8);
+  --card-surface: #fff;
+  --soft-accent: color-mix(in srgb, var(--accent, #286b49) 11%, #fff);
+  --surface-line: color-mix(in srgb, var(--accent, #286b49) 12%, #dedee1);
+  color: #20242a;
+  background: var(--page-surface);
+}
+.app-shell, .app-header, .main-nav { background: var(--page-surface); }
+.app-header, .main-nav { border-color: var(--surface-line); }
+.app-shell { box-shadow: 0 0 0 1px var(--surface-line); }
+.mission-panel { color: var(--accent-foreground, #fff); background: repeating-linear-gradient(135deg, transparent 0 17px, rgba(255,255,255,.07) 17px 18px), linear-gradient(135deg, var(--accent, #286b49), color-mix(in srgb, var(--accent, #286b49) 76%, #10121b)); }
+.mission-identity p, .mission-level-line, .mission-level-line strong, .mission-medal, .mission-next button { color: var(--accent-foreground, #fff); }
+.mission-next { border-color: color-mix(in srgb, var(--accent-foreground, #fff) 35%, transparent); }
+.mission-avatar { border-color: color-mix(in srgb, var(--accent-foreground, #fff) 35%, transparent); background: color-mix(in srgb, var(--accent-foreground, #fff) 13%, transparent); }
+.mission-level [role="progressbar"] { background: color-mix(in srgb, var(--accent-foreground, #fff) 23%, transparent); }
+.mission-level [role="progressbar"] span { background: var(--accent-foreground, #fff); }
+.equipment-panel, .recipe-card, .personal-card, .settings-card, .identity-card, .profile-stat, .achievement-card, .level-card, .record-card, .search-field, .empty-card { border-color: var(--surface-line); background: var(--card-surface); }
+.recipe-visual, .equipment-icon.mint, .avatar, .completion-hero, .question-icon, .achievement-icon, .dialog-icon, .settings-avatar { background: var(--soft-accent); color: var(--accent-ink, #286b49); }
+.difficulty-badge.simple, .filter-pill, .personal-record-badge { background: var(--soft-accent); color: var(--accent-ink, #286b49); }
+.equipment-option.is-selected, .ingredient-item.checked { background: var(--soft-accent); }
+.equipment-option:hover, .search-field:focus-within { border-color: var(--accent, #286b49); }
+.search-field:focus-within { box-shadow: 0 0 0 2px var(--soft-accent); }
+.demo-active, .demo-card button, .search-field button, .empty-card, .medal-item.earned .medal-state, .next-medal, .secondary-action, .header-customize { color: var(--accent-ink, #286b49); }
+.nav-tab.active { color: var(--accent-ink, #286b49); }
+.main-nav .nav-tab.active { background: var(--soft-accent); }
+.header-customize { min-height: 42px; padding: 0 9px; border: 1px solid var(--surface-line); border-radius: 11px; display: inline-flex; align-items: center; gap: 5px; background: var(--soft-accent); font-size: 13px; font-weight: 750; white-space: nowrap; }
+.header-customize:hover { filter: brightness(.95); }
+.home-discovery { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 16px; }
+.home-discovery .search-field { min-width: 0; margin: 0; }
+.search-field .search-submit { flex: 0 0 auto; width: auto; min-width: 68px; padding: 0 9px; background: var(--accent, #286b49); color: var(--accent-foreground, #fff); font-size: 13px; font-weight: 750; }
+.search-field .search-submit:hover { background: color-mix(in srgb, var(--accent, #286b49) 84%, #111); }
+.favorites-shortcut { min-height: 48px; padding: 0 13px; border: 1px solid var(--surface-line); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; background: var(--card-surface); color: var(--accent-ink, #286b49); font-size: 14px; font-weight: 750; }
+.favorites-shortcut[aria-pressed="true"] { border-color: var(--accent, #286b49); background: var(--soft-accent); }
+.favorite-button { flex: 0 0 auto; width: auto; padding: 0 8px; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 750; }
+.v4-recipe-card { border-top: 3px solid var(--accent, #286b49); box-shadow: 0 7px 22px color-mix(in srgb, var(--accent, #286b49) 9%, transparent); }
+.recipe-reward { width: fit-content; max-width: 100%; margin-top: 11px; padding: 6px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 5px; background: var(--soft-accent); color: var(--accent-ink, #286b49); font-size: 11px; font-weight: 780; line-height: 1.25; }
+.equipment-notice { padding: 11px 13px; margin: -13px 0 19px; border: 1px solid var(--surface-line); border-radius: 11px; background: var(--soft-accent); color: var(--accent-ink, #286b49); font-size: 13px; }
+@media (min-width: 768px) { .home-discovery { grid-template-columns: minmax(0, 1fr) auto; } }
+
+:root[data-theme="dark"] {
+  --page-surface: color-mix(in srgb, var(--accent, #286b49) 5%, #15151c);
+  --card-surface: color-mix(in srgb, var(--accent, #286b49) 6%, #24242d);
+  --soft-accent: color-mix(in srgb, var(--accent, #286b49) 24%, #292932);
+  --surface-line: color-mix(in srgb, var(--accent, #286b49) 20%, #51515d);
+  color: #f4f3f8;
+  background: var(--page-surface);
+}
+[data-theme="dark"] .app-shell, [data-theme="dark"] .app-header, [data-theme="dark"] .main-nav { background: var(--page-surface); }
+[data-theme="dark"] .equipment-panel, [data-theme="dark"] .recipe-card, [data-theme="dark"] .personal-card,
+[data-theme="dark"] .editor-section, [data-theme="dark"] .settings-card, [data-theme="dark"] .editor-summary,
+[data-theme="dark"] .level-card, [data-theme="dark"] .record-card, [data-theme="dark"] .records-table,
+[data-theme="dark"] .identity-card, [data-theme="dark"] .profile-stat, [data-theme="dark"] .achievement-card,
+[data-theme="dark"] .medal-list, [data-theme="dark"] .step-progress, [data-theme="dark"] .question-card,
+[data-theme="dark"] .ingredient-item, [data-theme="dark"] .empty-card, [data-theme="dark"] .search-field,
+[data-theme="dark"] .pause-dialog, [data-theme="dark"] .animation-card, [data-theme="dark"] .action-bar,
+[data-theme="dark"] .action-bar-inner { border-color: var(--surface-line); background: var(--card-surface); }
+[data-theme="dark"] .recipe-visual, [data-theme="dark"] .equipment-icon.mint, [data-theme="dark"] .avatar,
+[data-theme="dark"] .completion-hero, [data-theme="dark"] .question-icon, [data-theme="dark"] .achievement-icon,
+[data-theme="dark"] .dialog-icon, [data-theme="dark"] .settings-avatar { background: var(--soft-accent); color: var(--accent-ink); }
+[data-theme="dark"] .header-customize, [data-theme="dark"] .favorites-shortcut,
+[data-theme="dark"] .search-field .search-submit { border-color: var(--surface-line); }
+[data-theme="dark"] .header-customize, [data-theme="dark"] .favorites-shortcut { background: var(--soft-accent); color: var(--accent-ink); }
+[data-theme="dark"] .search-field .search-submit { background: var(--accent); color: var(--accent-foreground); }
+[data-theme="dark"] .main-nav .nav-tab.active { background: var(--soft-accent); color: var(--accent-ink); }
+[data-theme="dark"] .demo-card, [data-theme="dark"] .equipment-option,
+[data-theme="dark"] .difficulty-filters button, [data-theme="dark"] .status-filters button,
+[data-theme="dark"] .secondary-action, [data-theme="dark"] .backup-actions button,
+[data-theme="dark"] .backup-actions label, [data-theme="dark"] .form-equipment button,
+[data-theme="dark"] .theme-options button { border-color: var(--surface-line); background: var(--card-surface); color: #f4f3f8; }
+[data-theme="dark"] .equipment-option.is-selected, [data-theme="dark"] .difficulty-filters button.selected,
+[data-theme="dark"] .status-filters button.selected, [data-theme="dark"] .form-equipment button.selected,
+[data-theme="dark"] .theme-options button.selected { border-color: var(--accent); background: var(--soft-accent); color: var(--accent-ink); }
+[data-theme="dark"] .search-field input { border: 0; background: transparent; color: #f4f3f8; }
+[data-theme="dark"] .editor-section input, [data-theme="dark"] .editor-section select,
+[data-theme="dark"] .editor-section textarea, [data-theme="dark"] .color-inputs label input,
+[data-theme="dark"] .name-editor input { border-color: var(--surface-line); background: var(--page-surface); color: #f4f3f8; }
+[data-theme="dark"] .demo-card p, [data-theme="dark"] .intro-copy,
+[data-theme="dark"] .recipe-details p, [data-theme="dark"] .personal-card-top p,
+[data-theme="dark"] .origin-label, [data-theme="dark"] .status-note,
+[data-theme="dark"] .recipe-count, [data-theme="dark"] .recipe-footnote,
+[data-theme="dark"] .record-card p, [data-theme="dark"] .settings-card p,
+[data-theme="dark"] .completed-count, [data-theme="dark"] .medal-item small,
+[data-theme="dark"] .profile-stat, [data-theme="dark"] .editor-summary p,
+[data-theme="dark"] .section-heading span, [data-theme="dark"] .equipment-labels small { color: #c9c7d2; }
+[data-theme="dark"] .nav-tab { color: #aaa8b6; }
+[data-theme="dark"] .nav-tab.active { color: var(--accent-ink); }

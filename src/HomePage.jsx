@@ -8,6 +8,8 @@ import { compatibleRecipes, levelProgress, nextMedal, selectedEquipment } from '
 import { EQUIPMENT_OPTIONS } from './personal.js';
 
 const equipmentIcons = { stove: Flame, fryer: Wind, oven: Square, microwave: Microwave, electricPot: Zap, none: CircleSlash };
+const allEquipment = Object.fromEntries(EQUIPMENT_OPTIONS.map(([key]) => [key, true]));
+const scrollTo = (id) => document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth' });
 const equipmentHelp = {
   stove: 'Para receitas na panela', fryer: 'Para receitas crocantes', oven: 'Para receitas assadas',
   microwave: 'Para receitas rápidas', electricPot: 'Arroz e multicooker, sem pressão', none: 'Receitas sem aquecimento',
@@ -24,7 +26,7 @@ function MissionPanel({ state, dispatch, onChoose }) {
     <p className="mission-medal"><Medal size={18} aria-hidden="true" /> {medal ? `${state.completed} de ${medal.threshold} preparos para ${medal.name}` : 'Todas as medalhas conquistadas!'}</p>
     <div className="mission-next">{!selectedEquipment(state.equipment) ? <><strong>Monte sua cozinha</strong><button type="button" onClick={onChoose}>Escolher equipamentos <ArrowRight size={17} aria-hidden="true" /></button></>
       : state.prep ? <><strong>Missão em andamento: {state.prep.recipeSnapshot?.name ?? 'Receita'} · Etapa {state.prep.stepIndex + 1} de {state.prep.recipeSnapshot?.steps?.length ?? 4}</strong><button type="button" onClick={resume}>Retomar preparo <ArrowRight size={17} aria-hidden="true" /></button></>
-        : <><strong>Próxima missão: escolha uma receita</strong><button type="button" onClick={() => document.getElementById('catalog-list')?.scrollIntoView({ behavior: 'smooth' })}>Explorar receitas <ArrowRight size={17} aria-hidden="true" /></button></>}</div>
+        : <><strong>Próxima missão: escolha uma receita</strong><button type="button" onClick={() => scrollTo('catalog-list')}>Explorar receitas <ArrowRight size={17} aria-hidden="true" /></button></>}</div>
   </section>;
 }
 
@@ -48,8 +50,9 @@ function StandardCard({ recipe, favorite, onFavorite, onOpen, onCopy }) {
     <div className="recipe-visual" aria-hidden="true"><span>{recipe.emoji}</span></div>
     <div className="recipe-details"><div className="recipe-title-row"><h2>{recipe.name}</h2><span className={`difficulty-badge ${recipe.difficulty}`}>{recipe.difficulty === 'simple' ? 'Simples' : 'Elaborada'}</span></div>
       <p>{recipe.meta}</p>
+      <div className="recipe-reward"><Sparkles size={15} aria-hidden="true" /><span>Missão culinária · 100 XP ao concluir</span></div>
       <div className="standard-actions"><button type="button" className="recipe-link" onClick={onOpen}>Ver ingredientes <ArrowRight size={18} aria-hidden="true" /></button>
-        <button type="button" className="favorite-button" aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} aria-pressed={favorite} onClick={onFavorite}><Heart size={22} fill={favorite ? 'currentColor' : 'none'} aria-hidden="true" /></button>
+        <button type="button" className="favorite-button" aria-label={favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} aria-pressed={favorite} onClick={onFavorite}><Heart size={20} fill={favorite ? 'currentColor' : 'none'} aria-hidden="true" /><span>{favorite ? 'Favorita' : 'Favoritar'}</span></button>
         <button type="button" className="copy-button" onClick={onCopy}>Criar cópia</button></div>
     </div>
   </article>;
@@ -59,30 +62,40 @@ export function HomePage({ state, dispatch, headingRef }) {
   const [equipmentOpen, setEquipmentOpen] = useState(!selectedEquipment(state.equipment));
   const [difficulty, setDifficulty] = useState('all');
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [notice, setNotice] = useState('');
   useEffect(() => { if (!selectedEquipment(state.equipment)) setEquipmentOpen(true); }, [state.equipment]);
-  const matched = selectedEquipment(state.equipment) ? compatibleRecipes(state.equipment, state.search, recipes) : [];
+  const hasEquipment = selectedEquipment(state.equipment);
+  const browsingAll = !hasEquipment && (state.search.trim() || favoritesOnly);
+  const matched = hasEquipment || browsingAll ? compatibleRecipes(hasEquipment ? state.equipment : allEquipment, state.search, recipes) : [];
   const shown = matched.filter((recipe) => (difficulty === 'all' || recipe.difficulty === difficulty) && (!favoritesOnly || state.favoriteIds.includes(recipe.id)));
   const clearFilters = () => { setDifficulty('all'); setFavoritesOnly(false); dispatch({ type: 'SET_SEARCH', value: '' }); };
   const openRecipe = (recipe) => {
+    if (recipe.equipment && !state.equipment[recipe.equipment]) {
+      setEquipmentOpen(true);
+      setNotice(`Selecione ${EQUIPMENT_OPTIONS.find(([key]) => key === recipe.equipment)?.[1] ?? 'o equipamento'} para preparar esta receita.`);
+      scrollTo('equipment-panel');
+      return;
+    }
     const replace = Boolean(state.prep && state.prep.recipeId !== recipe.id);
     if (replace && !window.confirm('Começar outra receita substituirá o preparo pausado. Continuar?')) return;
     dispatch({ type: 'OPEN_RECIPE', recipeId: recipe.id, recipe, replace, now: Date.now() });
   };
   return <main className="page-content recipes-page v4-home">
-    <MissionPanel state={state} dispatch={dispatch} onChoose={() => { setEquipmentOpen(true); document.getElementById('equipment-panel')?.scrollIntoView({ behavior: 'smooth' }); }} />
-    <div className="search-field"><Search size={20} aria-hidden="true" /><input type="search" aria-label="Buscar por nome ou ingrediente" placeholder="Buscar por nome ou ingrediente" value={state.search} onChange={(event) => dispatch({ type: 'SET_SEARCH', value: event.target.value })} />{state.search && <button type="button" aria-label="Limpar busca" onClick={() => dispatch({ type: 'SET_SEARCH', value: '' })}><X size={19} aria-hidden="true" /></button>}</div>
+    <MissionPanel state={state} dispatch={dispatch} onChoose={() => { setEquipmentOpen(true); scrollTo('equipment-panel'); }} />
+    <div className="home-discovery"><form className="search-field" role="search" onSubmit={(event) => { event.preventDefault(); scrollTo('catalog-list'); }}><Search size={20} aria-hidden="true" /><input type="search" aria-label="Buscar por nome ou ingrediente" placeholder="Buscar por nome ou ingrediente" value={state.search} onChange={(event) => dispatch({ type: 'SET_SEARCH', value: event.target.value })} />{state.search && <button type="button" aria-label="Limpar busca" onClick={() => dispatch({ type: 'SET_SEARCH', value: '' })}><X size={19} aria-hidden="true" /></button>}<button type="submit" className="search-submit">Buscar</button></form><button type="button" className="favorites-shortcut" aria-pressed={favoritesOnly} onClick={() => { setFavoritesOnly(!favoritesOnly); scrollTo('catalog-list'); }}><Heart size={18} fill={favoritesOnly ? 'currentColor' : 'none'} aria-hidden="true" /> Favoritas</button></div>
     <div className="screen-intro"><p className="eyebrow">CATÁLOGO DE MISSÕES</p><h1 ref={headingRef} tabIndex={-1}>Receitas</h1><p className="intro-copy">Encontre uma receita para a sua cozinha.</p></div>
     {state.completed === 0 && state.xp === 0 && !state.prep && <div className="demo-card"><span className="demo-icon"><Medal size={20} aria-hidden="true" /></span><div><strong>Experimente a medalha Iniciante</strong><p>Comece com 9 preparos simulados e conclua mais uma receita.</p><button type="button" onClick={() => dispatch({ type: 'SEED_DEMO' })}>Iniciar demonstração com 9 preparos <ArrowRight size={16} aria-hidden="true" /></button></div></div>}
     <div id="equipment-panel"><EquipmentPanel state={state} dispatch={dispatch} open={equipmentOpen} setOpen={setEquipmentOpen} /></div>
+    {notice && <p className="equipment-notice" role="status">{notice}</p>}
     <section id="catalog-list" className="catalog-section"><div className="section-heading"><h2>Escolha sua próxima receita</h2></div>
-      <div className="difficulty-filters" role="group" aria-label="Filtros do catálogo">{[['all', 'Todas'], ['simple', 'Simples'], ['elaborate', 'Elaboradas']].map(([value, label]) => <button key={value} type="button" aria-pressed={difficulty === value} className={difficulty === value ? 'selected' : ''} onClick={() => setDifficulty(value)}>{label}</button>)}<button type="button" aria-pressed={favoritesOnly} className={favoritesOnly ? 'selected' : ''} onClick={() => setFavoritesOnly(!favoritesOnly)}><Heart size={16} aria-hidden="true" /> Favoritas</button></div>
+      <div className="difficulty-filters" role="group" aria-label="Filtros do catálogo">{[['all', 'Todas'], ['simple', 'Simples'], ['elaborate', 'Elaboradas']].map(([value, label]) => <button key={value} type="button" aria-pressed={difficulty === value} className={difficulty === value ? 'selected' : ''} onClick={() => setDifficulty(value)}>{label}</button>)}</div>
       <p className="recipe-count" role="status">{shown.length} {shown.length === 1 ? 'receita visível' : 'receitas visíveis'}</p>
-      {!selectedEquipment(state.equipment) ? <div className="empty-card"><CookingPot size={26} aria-hidden="true" /><strong>Escolha seus equipamentos para ver receitas.</strong></div>
+      {!hasEquipment && !browsingAll ? <div className="empty-card"><CookingPot size={26} aria-hidden="true" /><strong>Escolha seus equipamentos ou busque uma receita.</strong></div>
         : shown.length ? <div className="recipe-list v4-recipe-list">{shown.map((recipe) => <StandardCard key={recipe.id} recipe={recipe} favorite={state.favoriteIds.includes(recipe.id)}
               onFavorite={() => dispatch({ type: 'TOGGLE_FAVORITE', id: recipe.id })} onOpen={() => openRecipe(recipe)} onCopy={() => dispatch({ type: 'OPEN_EDITOR', context: { mode: 'copy', source: recipe } })}
               />)}</div>
           : <div className="empty-card"><Search size={26} aria-hidden="true" /><strong>{favoritesOnly ? 'Nenhuma favorita com estes filtros.' : 'Nenhuma receita encontrada.'}</strong><p>{favoritesOnly ? 'Marque receitas com o coração ou ajuste os filtros.' : 'Tente outro nome ou altere os equipamentos.'}</p>{favoritesOnly && <button type="button" className="secondary-action" onClick={clearFilters}>Limpar filtros</button>}</div>}
-      <p className="recipe-footnote"><Leaf size={17} aria-hidden="true" /> Receitas sem aquecimento funcionam com qualquer seleção de equipamentos.</p>
+      <p className="recipe-footnote"><Leaf size={17} aria-hidden="true" /> {hasEquipment ? 'Receitas sem aquecimento funcionam com qualquer seleção de equipamentos.' : 'Você pode buscar e favoritar antes de escolher os equipamentos.'}</p>
     </section>
   </main>;
 }

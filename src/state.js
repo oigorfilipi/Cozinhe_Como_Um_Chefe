@@ -25,6 +25,7 @@ export function initialState() {
     theme: 'light',
     accent: '#286B49',
     profilePhoto: null,
+    settingsReturn: 'profile',
   };
 }
 
@@ -162,6 +163,7 @@ export function migrateState(saved, now = Date.now()) {
     theme: saved.version === 4 && saved.theme === 'dark' ? 'dark' : 'light',
     accent: saved.version === 4 && /^#[0-9a-f]{6}$/i.test(saved.accent) ? saved.accent.toUpperCase() : '#286B49',
     profilePhoto: saved.version === 4 && typeof saved.profilePhoto === 'string' && /^data:image\/(png|jpeg|webp);base64,/.test(saved.profilePhoto) ? saved.profilePhoto : null,
+    settingsReturn: saved.version === 4 && ['recipes', 'mine', 'records', 'profile'].includes(saved.settingsReturn) ? saved.settingsReturn : 'profile',
   };
 }
 
@@ -204,9 +206,10 @@ export function reducer(state, action) {
       return ['recipes', 'mine', 'records', 'profile'].includes(action.tab)
         ? { ...state, screen: action.tab, pauseOpen: false, editorContext: null } : state;
     case 'OPEN_SETTINGS':
-      return state.screen === 'profile' ? { ...state, screen: 'settings' } : state;
+      return ['recipes', 'mine', 'records', 'profile'].includes(state.screen)
+        ? { ...state, screen: 'settings', settingsReturn: state.screen } : state;
     case 'CLOSE_SETTINGS':
-      return state.screen === 'settings' ? { ...state, screen: 'profile' } : state;
+      return state.screen === 'settings' ? { ...state, screen: state.settingsReturn } : state;
     case 'SET_THEME':
       return ['light', 'dark'].includes(action.theme) ? { ...state, theme: action.theme } : state;
     case 'SET_ACCENT':

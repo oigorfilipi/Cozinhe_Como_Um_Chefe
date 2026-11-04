@@ -2,7 +2,7 @@ import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BookOpen, Check, ChefHat, CircleCheck, CircleSlash,
   Clock3, CookingPot, Flame, Leaf, Lightbulb, LockKeyhole, Medal, Microwave,
-  Pause, Pencil, Search, Settings2, Sparkles, Square, UserRound, Wind, X, Zap,
+  Palette, Pause, Pencil, Search, Settings2, Sparkles, Square, UserRound, Wind, X, Zap,
 } from 'lucide-react';
 import { medals, recipeById, recipes } from './data.js';
 import {
@@ -39,7 +39,7 @@ function PrimaryButton({ children, onClick, disabled = false, icon = true, nextA
   );
 }
 
-function Header({ xp, canPause, onPause, onBack }) {
+function Header({ xp, canPause, onPause, onBack, onSettings, showSettings }) {
   return (
     <header className="app-header">
       <div className="header-inner flex items-center justify-between gap-2.5">
@@ -50,6 +50,7 @@ function Header({ xp, canPause, onPause, onBack }) {
         </div>
         <div className="header-actions flex items-center gap-2">
           {canPause && <button className="pause-button" type="button" onClick={onPause}><Pause size={16} fill="currentColor" aria-hidden="true" /> Pausar</button>}
+          {showSettings && <button className="header-customize" type="button" onClick={onSettings} aria-label="Personalizar o site"><Palette size={18} aria-hidden="true" /><span>Visual</span></button>}
           <div className="xp-pill" aria-label={`Saldo de XP: ${xp}`}><Sparkles size={16} aria-hidden="true" /> <strong>{xp}</strong> XP</div>
         </div>
       </div>
@@ -482,7 +483,7 @@ export default function App() {
 
   return <div className={`app-shell ${showTabs ? 'has-tabs' : 'is-preparing'}`}>
     <div className="app-base" inert={Boolean(animation)}>
-      <Header xp={state.xp} canPause={['ingredients', 'step'].includes(state.screen)} onPause={dispatchType(dispatch, 'OPEN_PAUSE')} onBack={dispatchType(dispatch, 'LEAVE_PREP')} />
+      <Header xp={state.xp} canPause={['ingredients', 'step'].includes(state.screen)} onPause={dispatchType(dispatch, 'OPEN_PAUSE')} onBack={dispatchType(dispatch, 'LEAVE_PREP')} onSettings={dispatchType(dispatch, 'OPEN_SETTINGS')} showSettings={showTabs} />
       <div className={`app-layout ${showTabs ? 'with-nav' : 'flow-layout'}`}>
         {showTabs && <MainNav screen={state.screen} dispatch={dispatch} />}
         <div className="app-content">
