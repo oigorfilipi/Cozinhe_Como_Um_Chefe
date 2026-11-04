@@ -10,7 +10,7 @@ Este é um protótipo acadêmico da VT de Gamificação Aplicada. Foi feito em R
 
 ## Demonstração
 
-O endereço público do protótipo será adicionado aqui após a ativação do GitHub Pages. O endereço do repositório mostra os arquivos, mas a atividade exige também um **link navegável** para o professor.
+**[Abrir o protótipo no PC ou celular](https://oigorfilipi.github.io/Cozinhe_Como_Um_Chefe/)**. O endereço do repositório mostra os arquivos; este link abre o aplicativo para o professor navegar.
 
 **Percurso completo disponível:** Wrap frio, com quatro ingredientes e quatro etapas. As outras cinco receitas aparecem como **Em breve** para mostrar o filtro por equipamentos e a busca; elas ainda não podem ser preparadas no app.
 
