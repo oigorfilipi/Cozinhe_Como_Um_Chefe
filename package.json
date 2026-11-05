@@ -9,7 +9,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "editor": "vite --host 127.0.0.1 --open /tools/catalog-editor/",
+    "editor:dev": "vite --host 127.0.0.1 --open /tools/catalog-editor/",
+    "editor:build": "node tools/catalog-editor/build-standalone.mjs",
     "test": "vitest run"
   },
   "dependencies": {
