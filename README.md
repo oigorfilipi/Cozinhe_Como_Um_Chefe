@@ -49,7 +49,7 @@ No Windows, depois de instalar as dependências com `pnpm install --frozen-lockf
 
 1. Escolha uma receita para editar ou clique em **Criar receita**. Preencha equipamento, dificuldade, tempo, porções, utensílios, ingredientes, instruções, conferências e Dicas. É possível excluir receitas, exceto o wrap usado na demonstração.
 2. Clique em **Salvar receita no editor**. Essa ação guarda o rascunho neste navegador, sem alterar o site público. Use **Baixar manual.json** ou **Copiar conteúdo** para preparar o arquivo com todas as mudanças.
-3. Entre na sua conta GitHub, abra [src/catalog/manual.json](src/catalog/manual.json), clique no lápis, selecione todo o conteúdo e cole o texto copiado do editor. Escolha **Commit changes**. Os testes e a publicação automática do GitHub Pages executarão depois do commit. Só quem tem permissão de escrita no repositório pode confirmar a alteração.
+3. Entre na sua conta GitHub, abra [src/catalog/manual.json](src/catalog/manual.json), clique no lápis, selecione todo o conteúdo e cole o texto copiado do editor. Escolha **Commit changes** diretamente no ramo `main`. Se o GitHub criar outra branch, mescle a pull request antes de esperar a publicação. Os testes e a publicação automática do GitHub Pages executarão quando a mudança chegar ao `main`. Só quem tem permissão de escrita no repositório pode confirmar a alteração.
 
 O editor permite **Carregar manual.json** para continuar a partir de um arquivo mais recente. Antes de editar novamente em outro computador, carregue o arquivo atualizado do GitHub. O rascunho local não é um backup: guarde o arquivo baixado até confirmar a publicação. O site público continua usando a versão anterior se o teste ou a publicação falhar.
 
