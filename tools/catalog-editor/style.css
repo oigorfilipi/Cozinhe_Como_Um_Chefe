@@ -13,7 +13,7 @@ h1, h2, h3 { font-family: 'Segoe UI', Arial, sans-serif; }
 .editor-shell { min-height: 100vh; }
 .topbar { background: #183b2d; color: white; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px max(24px, calc((100vw - 1320px) / 2)); }
 .brand { display: flex; align-items: center; gap: 11px; }
-.brand-mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: #286b49; font-size: 27px; }
+.brand-mark { width: 44px; height: 44px; flex: 0 0 44px; display: block; }
 .brand strong, .brand span { display: block; }
 .brand strong { font-family: 'Segoe UI', Arial, sans-serif; font-size: 18px; }
 .brand span { color: #c5dfce; font-size: 12px; }
@@ -40,6 +40,8 @@ h1 { font-size: clamp(28px, 4vw, 40px); line-height: 1.1; margin-bottom: 9px; }
 .form-heading { border-bottom: 1px solid #e5ece5; padding-bottom: 18px; margin-bottom: 20px; }
 .form-heading h2 { margin: 0 0 3px; font-size: 25px; }
 .form-heading small { color: #708275; }
+.form-heading-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.form-heading-actions .danger { min-height: 36px; padding: 7px 11px; }
 .status { white-space: nowrap; border-radius: 99px; padding: 7px 11px; background: #edf5e9; color: #2d6640; font-size: 12px; font-weight: 700; }
 .status.removed { color: #a04f38; background: #fff0e9; }
 .form-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
