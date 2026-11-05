@@ -1,13 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App.jsx';
-import { ingredients, recipeById, recipes } from './data.js';
+import { baseRecipes, ingredients, recipeById, recipes } from './data.js';
 import {
   compatibleRecipes, formatDate, formatDuration, initialState, levelProgress,
   loadState, migrateState, reducer, STORAGE_KEY,
 } from './state.js';
+
+// Journey tests retain the academic demo while the published catalog can change later.
+vi.mock('./catalog/manual.json', () => ({ default: { version: 1, upserts: [], removedIds: [] } }));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -38,12 +41,12 @@ async function startUiPrep(user, { seed = false } = {}) {
 describe('níveis, filtro e formatação', () => {
   it('oferece dez receitas por aparelho e mais de dez sem aquecimento', () => {
     for (const equipment of ['stove', 'fryer', 'oven', 'microwave', 'electricPot']) {
-      const group = recipes.filter((recipe) => recipe.equipment === equipment);
+      const group = baseRecipes.filter((recipe) => recipe.equipment === equipment);
       expect(group).toHaveLength(10);
       expect(group.filter((recipe) => recipe.difficulty === 'simple')).toHaveLength(5);
       expect(group.filter((recipe) => recipe.difficulty === 'elaborate')).toHaveLength(5);
     }
-    expect(recipes.filter((recipe) => recipe.equipment === null).length).toBeGreaterThan(10);
+    expect(baseRecipes.filter((recipe) => recipe.equipment === null).length).toBeGreaterThan(10);
     expect(new Set(recipes.map((recipe) => recipe.id)).size).toBe(recipes.length);
   });
 
@@ -58,7 +61,7 @@ describe('níveis, filtro e formatação', () => {
 
   it('combina busca por nome e filtro de equipamentos, ignorando acentos e espaços', () => {
     const equipment = { ...initialState().equipment, microwave: true, oven: true };
-    expect(compatibleRecipes(equipment)).toHaveLength(32);
+    expect(compatibleRecipes(equipment, '', baseRecipes)).toHaveLength(32);
     expect(compatibleRecipes(equipment, '  BÓLO DE CANECA  ').map((item) => item.name)).toEqual(['Bolo de caneca de chocolate']);
     expect(compatibleRecipes(equipment, 'omelete')).toEqual([]);
     expect(formatDuration(300000)).toBe('5:00');

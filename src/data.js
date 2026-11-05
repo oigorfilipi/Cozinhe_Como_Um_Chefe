@@ -4,6 +4,8 @@ import { fryerRecipes } from './catalog/fryer.js';
 import { ovenRecipes } from './catalog/oven.js';
 import { microwaveRecipes } from './catalog/microwave.js';
 import { electricPotRecipes } from './catalog/electric-pot.js';
+import manualCatalog from './catalog/manual.json';
+import { applyManualCatalog } from './catalog/manual.js';
 
 export const medals = [
   { name: 'Iniciante', threshold: 10 },
@@ -13,7 +15,7 @@ export const medals = [
   { name: 'Alquimista da Cozinha', threshold: 50 },
 ];
 
-export const recipes = [
+export const baseRecipes = [
   ...noHeatRecipes,
   ...stoveRecipes,
   ...fryerRecipes,
@@ -21,6 +23,8 @@ export const recipes = [
   ...microwaveRecipes,
   ...electricPotRecipes,
 ];
+
+export const recipes = applyManualCatalog(baseRecipes, manualCatalog);
 
 const recipeMap = new Map(recipes.map((recipe) => [recipe.id, recipe]));
 export const recipeById = (id) => recipeMap.get(id) ?? null;

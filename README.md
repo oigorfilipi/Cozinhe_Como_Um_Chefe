@@ -41,7 +41,17 @@ Os botões **Exportar backup** e **Importar backup** em Minhas Receitas permitem
 
 ## Catálogo padrão no Git
 
-As **62 receitas padrão estão incluídas no código** e são iguais para todos que abrem a mesma versão do site. O catálogo não pode ser editado nem excluído pela interface. Para corrigir ou acrescentar uma receita padrão, altere o código do repositório e publique uma nova versão no GitHub Pages.
+A base contém **62 receitas padrão**, e o arquivo de alterações pode mudar o total publicado. O catálogo é igual para todos que abrem a mesma versão do site. Ele não pode ser editado nem excluído pela interface pública. Correções, novas receitas e exclusões podem ser preparadas no **editor local**, sem escrever código, e publicadas pelo GitHub. O wrap da demonstração pode ser editado, mas não excluído. Se suas alterações mudarem as regras ou os números da apresentação, atualize também o PDF da VT.
+
+### Editor manual de receitas padrão
+
+No Windows, depois de instalar as dependências com `pnpm install --frozen-lockfile`, abra [Abrir Editor de Receitas.cmd](Abrir%20Editor%20de%20Receitas.cmd) com dois cliques. Como alternativa, execute `pnpm editor`. O navegador abrirá o formulário local. **Ele não faz parte do site publicado** e não pede senha nem chave de acesso ao GitHub.
+
+1. Escolha uma receita para editar ou clique em **Criar receita**. Preencha equipamento, dificuldade, tempo, porções, utensílios, ingredientes, instruções, conferências e Dicas. É possível excluir receitas, exceto o wrap usado na demonstração.
+2. Clique em **Salvar receita no editor**. Essa ação guarda o rascunho neste navegador, sem alterar o site público. Use **Baixar manual.json** ou **Copiar conteúdo** para preparar o arquivo com todas as mudanças.
+3. Entre na sua conta GitHub, abra [src/catalog/manual.json](src/catalog/manual.json), clique no lápis, selecione todo o conteúdo e cole o texto copiado do editor. Escolha **Commit changes**. Os testes e a publicação automática do GitHub Pages executarão depois do commit. Só quem tem permissão de escrita no repositório pode confirmar a alteração.
+
+O editor permite **Carregar manual.json** para continuar a partir de um arquivo mais recente. Antes de editar novamente em outro computador, carregue o arquivo atualizado do GitHub. O rascunho local não é um backup: guarde o arquivo baixado até confirmar a publicação. O site público continua usando a versão anterior se o teste ou a publicação falhar.
 
 As receitas criadas ou copiadas em **Minhas Receitas** pertencem apenas ao navegador da pessoa. Elas podem ser editadas e excluídas pela interface. O aplicativo não tem conta nem banco de dados; por isso, use **Exportar backup** para guardar seus dados antes de limpar o navegador ou trocar de aparelho.
 
@@ -61,7 +71,7 @@ pnpm test
 pnpm build
 ```
 
-Os testes automatizados cobrem XP, Dica com saldo zero, níveis, catálogo por equipamento, receitas próprias, busca, favoritas, retomada, Registros, medalha, animações, migração, backup, contraste e ausência de controles para editar ou excluir receitas padrão.
+Os testes automatizados cobrem XP, Dica com saldo zero, níveis, catálogo por equipamento, alterações manuais do catálogo, receitas próprias, busca, favoritas, retomada, Registros, medalha, animações, migração, backup, contraste e ausência de controles para editar ou excluir receitas padrão no site público.
 
 ## Demonstração da medalha
 

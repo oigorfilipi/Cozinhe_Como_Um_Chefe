@@ -1,12 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App.jsx';
-import { recipeById, recipes } from './data.js';
+import { baseRecipes, recipeById } from './data.js';
 import { copyStandardRecipe, emptyPersonalRecipe, normalizePersonalRecipe, validatePersonalRecipe } from './personal.js';
 import { createBackup, initialState, loadState, migrateState, parseBackup, reducer, STORAGE_KEY } from './state.js';
 import { contrastRatio, themeColors } from './theme.js';
+
+vi.mock('./catalog/manual.json', () => ({ default: { version: 1, upserts: [], removedIds: [] } }));
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -83,7 +85,7 @@ describe('receitas pessoais e dados locais', () => {
     const restored = parseBackup(createBackup(state));
     expect(restored.personalRecipes[0].origin.name).toBe('Wrap frio');
     expect(restored.favoriteIds).toEqual(['wrap']);
-    expect(recipes).toHaveLength(62);
+    expect(baseRecipes).toHaveLength(62);
     expect(() => parseBackup('{"format":"wrong"}')).toThrow('Arquivo de backup inválido.');
     expect(migrateState(restored).personalRecipes).toHaveLength(1);
   });
